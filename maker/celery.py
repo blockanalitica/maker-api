@@ -8,6 +8,7 @@ import time
 
 import celery.signals
 from celery import Celery
+from celery.signals import setup_logging
 
 from maker.utils.metrics import gauge, raw_timer, statsd_client
 
@@ -19,6 +20,15 @@ _prev_queue_size_check = 0
 
 app = Celery("maker_api")
 app.config_from_object("django.conf:settings", namespace="CELERY")
+
+
+@setup_logging.connect
+def config_loggers(*args, **kwargs):
+    from logging.config import dictConfig
+
+    from django.conf import settings
+
+    dictConfig(settings.LOGGING)
 
 
 def _celery_task_key(task):
