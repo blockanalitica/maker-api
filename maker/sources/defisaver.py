@@ -51,30 +51,19 @@ def get_defisaver_vault_data(vault_id):
 
 def get_defisaver_chain_data(ilk):
     w3 = Blockchain()
-    wallet_address_update = []
     protection_bulk_update = []
     all_ids = Vault.objects.filter(ilk=ilk).values_list("uid", flat=True)
     for ids in chunks(all_ids, 3000):
         vaults_protected = fetch_protected_vaults(ids, chain=w3)
         for uid, response in vaults_protected.items():
             protection = response["getSubscribedInfo"]
-
-            owner_address = response["getOwner"]
-            data = {"uid": uid, "owner_address": owner_address}
-
+            data = {"uid": uid}
             if protection[0] is True:
                 data["protection_service"] = "defisaver"
                 protection_bulk_update.append(Vault(**data))
             else:
                 data["protection_service"] = None
                 protection_bulk_update.append(Vault(**data))
-                wallet_address_update.append(Vault(**data))
-        if wallet_address_update:
-            bulk_update_models(
-                wallet_address_update,
-                update_field_names=["owner_address"],
-                pk_field_names=["uid"],
-            )
         if protection_bulk_update:
             bulk_update_models(
                 protection_bulk_update,
@@ -84,7 +73,6 @@ def get_defisaver_chain_data(ilk):
                 ],
                 pk_field_names=["uid"],
             )
-        wallet_address_update = []
         protection_bulk_update = []
 
 

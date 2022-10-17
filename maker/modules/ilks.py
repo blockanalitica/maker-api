@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: © 2022 Dai Foundation <www.daifoundation.org>
 #
 # SPDX-License-Identifier: Apache-2.0
-
+import logging
 import time
 from datetime import datetime
 from decimal import Decimal
@@ -25,8 +25,11 @@ from ..models import (
 )
 from ..modules.events import save_last_activity
 from ..sources import makerburn
+from ..sources.blockanalitica import fetch_ilk_vaults
 from ..sources.dicu import get_vaults_data
 from ..sources.maker_changelog import get_addresses_for_asset
+
+log = logging.getLogger(__name__)
 
 
 @auto_named_statsd_timer
@@ -176,6 +179,10 @@ def create_or_update_vaults(ilk):
         osm = OSM.objects.filter(symbol=ilk_obj.collateral).latest()
         osm_price = min(osm.current_price, osm.next_price)
 
+    vault_map = {}
+    for vault in fetch_ilk_vaults(ilk):
+        vault_map[str(vault["vault_uid"])] = vault
+
     for data in get_vaults_data(ilk):
         try:
             vault = Vault.objects.get(uid=data["uid"], ilk=ilk)
@@ -183,6 +190,14 @@ def create_or_update_vaults(ilk):
         except Vault.DoesNotExist:
             vault = Vault(uid=data["uid"], ilk=ilk)
             created = True
+
+        datalake_vault = vault_map.get(data["uid"])
+        if datalake_vault:
+            vault.ds_proxy_address = datalake_vault["ds_proxy"]
+            vault.owner_address = datalake_vault["owner_address"]
+            vault.owner_ens = datalake_vault["owner_ens"]
+        else:
+            log.info("Couldn't find vault %s in datalake", data["uid"])
 
         vault.urn = data["urn"]
         vault.collateral_symbol = ilk_obj.collateral
@@ -205,7 +220,6 @@ def create_or_update_vaults(ilk):
         )
         vault.available_collateral = Decimal(str(data["available_collateral"]))
         vault.available_debt = Decimal(str(data["available_debt"]))
-        vault.ds_proxy_address = data["ds_proxy"]
         vault.block_created = data["block_created"]
         vault.block_number = data["last_block"]
         vault.block_timestamp = data["last_time"].timestamp()
