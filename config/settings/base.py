@@ -247,6 +247,10 @@ LOGGING = {
             "propagate": True,
             "level": "WARNING",
         },
+        "maker": {
+            "propagate": True,
+            "level": env("MAKER_LOG_LEVEL", default="INFO"),
+        },
         "": {
             "handlers": ["console"],
             "level": "INFO",
@@ -285,3 +289,4 @@ DISCORD_ALERT_BOT_WEBHOOK_MKR = env("DISCORD_ALERT_BOT_WEBHOOK_MKR", default="")
 CRYPTOCOMPARE_API_KEY = env("CRYPTOCOMPARE_API_KEY", default="")
 
 BLOCKANALITICA_PAPI_URL = env("BLOCKANALITICA_PAPI_URL", default="")
+BLOCKANALITICA_DATALAKE_URL = env("BLOCKANALITICA_DATALAKE_URL", default="")

@@ -187,6 +187,7 @@ class Vault(TimeStampedModel):
     available_collateral = models.DecimalField(max_digits=32, decimal_places=18)
     available_debt = models.DecimalField(max_digits=32, decimal_places=18)
     owner_address = models.CharField(max_length=42, null=True)
+    owner_ens = models.CharField(max_length=64, null=True)
     ds_proxy_address = models.CharField(max_length=42, null=True)
     block_created = models.IntegerField()
     block_number = models.IntegerField(null=True)
