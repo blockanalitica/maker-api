@@ -9,6 +9,7 @@ from maker.models import MakerWallet, VaultOwner
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
+        VaultOwner.objects.update(name=None, tags=[])
         for wallet in MakerWallet.objects.select_related("owner").all():
             try:
                 owner = VaultOwner.objects.get(address__iexact=wallet.address)
