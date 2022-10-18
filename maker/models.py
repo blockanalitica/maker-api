@@ -553,6 +553,19 @@ class VaultProtectionScore(TimeStampedModel):
         ]
 
 
+class VaultOwner(TimeStampedModel):
+    address = models.CharField(max_length=42, unique=True)
+    name = models.CharField(max_length=256, null=True)
+    ens = models.CharField(max_length=64, null=True)
+    tags = ArrayField(models.CharField(max_length=20), default=list)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: address={self.address} name={self.name}>"
+
+    def __str__(self):
+        return self.name
+
+
 class MakerWalletOwner(TimeStampedModel):
     name = models.CharField(max_length=256)
     slug = AutoSlugField(populate_from="name", null=True)
