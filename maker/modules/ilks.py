@@ -198,6 +198,10 @@ def create_or_update_vaults(ilk):
         "is_at_risk_market",
         "liquidation_drop",
         "protection_score",
+        "owner_address",
+        "owner_ens",
+        "owner_name",
+        "is_institution",
     ]
 
     osm_price = None
