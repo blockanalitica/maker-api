@@ -69,7 +69,6 @@ def get_defisaver_chain_data(ilk):
                 protection_bulk_update,
                 update_field_names=[
                     "protection_service",
-                    "owner_address",
                 ],
                 pk_field_names=["uid"],
             )
