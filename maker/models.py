@@ -187,6 +187,7 @@ class Vault(TimeStampedModel):
     available_collateral = models.DecimalField(max_digits=32, decimal_places=18)
     available_debt = models.DecimalField(max_digits=32, decimal_places=18)
     owner_address = models.CharField(max_length=42, null=True)
+    owner_ens = models.CharField(max_length=64, null=True)
     ds_proxy_address = models.CharField(max_length=42, null=True)
     block_created = models.IntegerField()
     block_number = models.IntegerField(null=True)
@@ -550,6 +551,19 @@ class VaultProtectionScore(TimeStampedModel):
             "ilk",
             "timestamp",
         ]
+
+
+class VaultOwner(TimeStampedModel):
+    address = models.CharField(max_length=42, unique=True)
+    name = models.CharField(max_length=256, null=True)
+    ens = models.CharField(max_length=64, null=True)
+    tags = ArrayField(models.CharField(max_length=20), default=list)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: address={self.address} name={self.name}>"
+
+    def __str__(self):
+        return self.name
 
 
 class MakerWalletOwner(TimeStampedModel):

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: © 2022 Dai Foundation <www.daifoundation.org>
 #
 # SPDX-License-Identifier: Apache-2.0
-
+import logging
 import time
 from datetime import datetime
 from decimal import Decimal
@@ -18,15 +18,18 @@ from ..models import (
     OSM,
     Ilk,
     MakerAsset,
-    MakerWallet,
     MarketPrice,
     Vault,
+    VaultOwner,
     VaultsLiquidation,
 )
 from ..modules.events import save_last_activity
 from ..sources import makerburn
+from ..sources.blockanalitica import fetch_ilk_vaults
 from ..sources.dicu import get_vaults_data
 from ..sources.maker_changelog import get_addresses_for_asset
+
+log = logging.getLogger(__name__)
 
 
 @auto_named_statsd_timer
@@ -123,6 +126,32 @@ def save_ilks():
             Ilk.objects.filter(ilk=ilk).update(**ilk_data)
 
 
+def _upsert_and_fetch_owner_data(ilk):
+    vault_owners = {}
+    vault_map = {}
+    owner_map = {}
+    for vault in fetch_ilk_vaults(ilk):
+        vault_map[str(vault["vault_uid"])] = {
+            "ds_proxy": vault["ds_proxy"],
+            "owner_address": vault["owner_address"],
+        }
+        if vault["owner_address"]:
+            vault_owners[vault["owner_address"]] = {"ens": vault["owner_ens"]}
+
+    for address, owner_data in vault_owners.items():
+        owner, _ = VaultOwner.objects.get_or_create(address=address)
+        if owner.ens != owner_data["ens"]:
+            owner.ens = owner_data["ens"]
+            owner.save(update_fields=["ens"])
+
+        owner_map[address] = {
+            "owner_name": owner.name,
+            "ens": owner.ens,
+            "is_institution": "institution" in (owner.tags or []),
+        }
+    return vault_map, owner_map
+
+
 @auto_named_statsd_timer
 def create_or_update_vaults(ilk):
     ilk_obj = Ilk.objects.get(ilk=ilk)
@@ -176,6 +205,8 @@ def create_or_update_vaults(ilk):
         osm = OSM.objects.filter(symbol=ilk_obj.collateral).latest()
         osm_price = min(osm.current_price, osm.next_price)
 
+    vault_map, owner_map = _upsert_and_fetch_owner_data(ilk)
+
     for data in get_vaults_data(ilk):
         try:
             vault = Vault.objects.get(uid=data["uid"], ilk=ilk)
@@ -183,6 +214,28 @@ def create_or_update_vaults(ilk):
         except Vault.DoesNotExist:
             vault = Vault(uid=data["uid"], ilk=ilk)
             created = True
+
+        datalake_vault = vault_map.get(data["uid"])
+        if datalake_vault:
+            vault.ds_proxy_address = datalake_vault["ds_proxy"]
+            vault.owner_address = datalake_vault["owner_address"]
+
+            owner_data = owner_map.get(datalake_vault["owner_address"])
+            if owner_data:
+                vault.owner_ens = owner_data["ens"]
+                vault.owner_name = owner_data["owner_name"]
+                vault.is_institution = owner_data["is_institution"]
+            else:
+                vault.owner_ens = None
+                vault.owner_name = None
+                vault.is_institution = None
+        else:
+            log.info("Couldn't find vault %s in datalake", data["uid"])
+            vault.ds_proxy_address = None
+            vault.owner_address = None
+            vault.owner_ens = None
+            vault.owner_name = None
+            vault.is_institution = None
 
         vault.urn = data["urn"]
         vault.collateral_symbol = ilk_obj.collateral
@@ -205,7 +258,6 @@ def create_or_update_vaults(ilk):
         )
         vault.available_collateral = Decimal(str(data["available_collateral"]))
         vault.available_debt = Decimal(str(data["available_debt"]))
-        vault.ds_proxy_address = data["ds_proxy"]
         vault.block_created = data["block_created"]
         vault.block_number = data["last_block"]
         vault.block_timestamp = data["last_time"].timestamp()
@@ -256,18 +308,10 @@ def create_or_update_vaults(ilk):
             pk_field_names=["uid", "ilk"],
         )
     get_defisaver_chain_data(ilk)
-    update_wallet_owners(ilk)
     if ilk_obj.type in ["asset", "lp"]:
         generate_vaults_liquidation(ilk)
     update_ilk_with_vaults_stats(ilk)
     save_last_activity(ilk)
-
-
-def update_wallet_owners(ilk):
-    for wallet in MakerWallet.objects.all():
-        Vault.objects.filter(owner_address=wallet.address, ilk=ilk).update(
-            is_institution=wallet.is_institution, owner_name=wallet.name
-        )
 
 
 def update_ilk_with_vaults_stats(ilk):

@@ -221,7 +221,7 @@ class AllVaultPositionsView(PaginatedApiView):
 class VaultCrHistoryView(APIView):
     def get(self, request, ilk, uid):
         vault = get_object_or_404(Vault, uid=uid, ilk=ilk)
-        symbol = (vault.ilk).split("-")[0]
+        symbol = vault.ilk.split("-")[0]
 
         days_ago = int(request.GET.get("days_ago", 7))
 
