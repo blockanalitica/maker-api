@@ -234,7 +234,7 @@ def create_or_update_vaults(ilk):
                 vault.owner_name = None
                 vault.is_institution = None
         else:
-            log.info("Couldn't find vault %s in datalake", data["uid"])
+            log.debug("Couldn't find vault %s in datalake", data["uid"])
             vault.ds_proxy_address = None
             vault.owner_address = None
             vault.owner_ens = None
