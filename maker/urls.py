@@ -104,7 +104,8 @@ from .views.vaults_at_risk import (
     VaultsAtRiskMarketView,
     VaultsAtRiskView,
 )
-from .views.whales import WhalesView, WhaleView
+from .views.wallets import WalletDebtHistoryView, WalletView
+from .views.whales import WhalesView
 
 app_name = "maker"
 
@@ -415,9 +416,14 @@ urlpatterns = [
         name="whales",
     ),
     path(
-        "whales/<str:slug>/",
-        WhaleView.as_view(),
-        name="whale",
+        "wallets/<str:address>/",
+        WalletView.as_view(),
+        name="wallet",
+    ),
+    path(
+        "wallets/<str:address>/debt-history/",
+        WalletDebtHistoryView.as_view(),
+        name="wallet-debt-history",
     ),
     path(
         "psms/",

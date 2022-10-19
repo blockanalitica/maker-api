@@ -563,7 +563,7 @@ class VaultOwner(TimeStampedModel):
         return f"<{self.__class__.__name__}: address={self.address} name={self.name}>"
 
     def __str__(self):
-        return self.name
+        return self.address
 
 
 class MakerWalletOwner(TimeStampedModel):

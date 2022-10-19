@@ -4,7 +4,7 @@
 
 from django.contrib import admin
 
-from .models import ForumPost
+from .models import ForumPost, VaultOwner
 
 
 @admin.register(ForumPost)
@@ -14,5 +14,21 @@ class ForumPostAdmin(admin.ModelAdmin):
         "title",
         "publish_date",
         "publisher",
+        "created",
+    ]
+
+
+@admin.register(VaultOwner)
+class VaultOwnerAdmin(admin.ModelAdmin):
+    search_fields = ["address", "ens", "name"]
+    readonly_fields = (
+        "address",
+        "ens",
+    )
+    list_display = [
+        "address",
+        "name",
+        "ens",
+        "tags",
         "created",
     ]
