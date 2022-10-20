@@ -28,6 +28,7 @@ def get_vaults_at_risk():
         "liquidation_price",
         "protection_score",
         "last_activity",
+        "owner_ens",
         "owner_name",
         "protection_service",
     )
@@ -75,6 +76,7 @@ def get_vaults_at_risk_market():
         "liquidation_price",
         "protection_score",
         "last_activity",
+        "owner_ens",
         "owner_name",
         "protection_service",
     )
