@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from autoslug import AutoSlugField
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from model_utils.models import TimeStampedModel, UUIDModel
@@ -564,41 +563,6 @@ class VaultOwner(TimeStampedModel):
 
     def __str__(self):
         return self.address
-
-
-class MakerWalletOwner(TimeStampedModel):
-    name = models.CharField(max_length=256)
-    slug = AutoSlugField(populate_from="name", null=True)
-    is_whale = models.BooleanField(default=False)
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: name={self.name}>"
-
-    def __str__(self):
-        return self.name
-
-
-class MakerWallet(TimeStampedModel):
-    address = models.CharField(max_length=42, unique=True)
-    name = models.CharField(max_length=256, null=True)
-    owner = models.ForeignKey(
-        "MakerWalletOwner",
-        related_name="wallets",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-    )
-    is_institution = models.BooleanField(default=False)
-
-    @property
-    def etherscan_url(self):
-        return "https://etherscan.io/address/{}".format(self.address)
-
-    def __str__(self):
-        return self.name or self.address
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: address={self.address}, name={self.name}>"
 
 
 class VaultsLiquidationHistory(TimeStampedModel):

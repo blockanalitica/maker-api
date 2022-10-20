@@ -19,7 +19,7 @@ from maker.modules.liquidations import get_liquidations_per_drop_data
 from maker.modules.slippage import get_slippage_for_lp, get_slippage_to_dai
 from maker.utils.views import PaginatedApiView
 
-from ..models import Auction, AuctionAction, Ilk, MakerWallet
+from ..models import Auction, AuctionAction, Ilk
 from ..modules.auctions import (
     get_auction,
     get_auction_dur_stats,
@@ -657,17 +657,12 @@ class KeepersView(APIView):
             keepers[action["keeper"]]["last_active"] = action["datetime"]
 
         for keeper, values in keepers.items():
-            try:
-                wallet = MakerWallet.objects.get(address=keeper)
-
-            except MakerWallet.DoesNotExist:
-                wallet = keeper
             stats["debt_repaid"] += values["debt"]
             stats["kick_count"] += values["count"]
             stats["incentives"] += values["incentives"]
             results.append(
                 {
-                    "wallet": wallet,
+                    "wallet": keeper,
                     "debt_liquidated": values["debt"],
                     "incentives": values["incentives"],
                     "count": values["count"],
@@ -713,16 +708,11 @@ class TakersView(APIView):
             takers[action["caller"]]["last_active"] = action["datetime"]
 
         for caller, values in takers.items():
-            try:
-                wallet = MakerWallet.objects.get(address=caller)
-
-            except MakerWallet.DoesNotExist:
-                wallet = caller
             stats["debt_repaid"] += values["debt"]
             stats["kick_count"] += values["count"]
             results.append(
                 {
-                    "wallet": wallet,
+                    "wallet": caller,
                     "debt_liquidated": values["debt"],
                     "count": values["count"],
                     "share": values["debt"] / total_debt["amount"] * 100,

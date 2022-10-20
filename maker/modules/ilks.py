@@ -287,6 +287,9 @@ def create_or_update_vaults(ilk):
                     vault.is_at_risk = vault.liquidation_price >= vault.osm_price
             if market_price:
                 vault.is_at_risk_market = vault.liquidation_price >= market_price
+        else:
+            vault.liquidation_drop = 0
+
         if created:
             bulk_create.append(vault)
             if len(bulk_create) == 1000:
