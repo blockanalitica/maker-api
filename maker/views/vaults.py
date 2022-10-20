@@ -38,8 +38,9 @@ class VaultPositionsViewSerializer(serpy.DictSerializer):
     liquidation_price = serpy.Field()
     liquidation_drop = serpy.Field()
     protection_score = serpy.StrField()
-    owner_address = serpy.StrField()
-    owner_name = serpy.StrField()
+    owner_address = serpy.Field()
+    owner_ens = serpy.Field()
+    owner_name = serpy.Field()
     osm_price = serpy.Field()
     collateral_change_1d = serpy.Field()
     collateral_change_7d = serpy.Field()
@@ -154,6 +155,7 @@ class VaultPositionsView(PaginatedApiView):
             "principal_change_7d",
             "principal_change_30d",
             "osm_price",
+            "owner_ens",
             "owner_name",
             "last_activity",
             "protection_service",
@@ -212,6 +214,7 @@ class AllVaultPositionsView(PaginatedApiView):
             "principal_change_7d",
             "principal_change_30d",
             "osm_price",
+            "owner_ens",
             "owner_name",
             "last_activity",
             "protection_service",

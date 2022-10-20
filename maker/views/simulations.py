@@ -82,6 +82,7 @@ class VaultAtRiskSerializer(serpy.DictSerializer):
     protection_score = serpy.Field()
     last_activity = serpy.Field()
     owner_name = serpy.Field()
+    owner_ens = serpy.Field()
     protection_service = serpy.Field()
 
 
@@ -117,6 +118,7 @@ class VaultsAtRiskSimulationView(PaginatedApiView):
             "liquidation_price",
             "protection_score",
             "last_activity",
+            "owner_ens",
             "owner_name",
             "protection_service",
         )
