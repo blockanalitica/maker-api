@@ -50,6 +50,7 @@ class VaultPositionsViewSerializer(serpy.DictSerializer):
     principal_change_30d = serpy.Field()
     last_activity = serpy.Field()
     protection_service = serpy.Field()
+    ds_proxy_address = serpy.Field()
 
 
 class VaultEventsViewViewSerializer(serpy.DictSerializer):
