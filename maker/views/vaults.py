@@ -74,6 +74,8 @@ class VaultView(APIView):
             "collateralization": vault.collateralization,
             "liquidation_price": vault.liquidation_price,
             "owner_address": vault.owner_address,
+            "owner_name": vault.owner_name,
+            "owner_ens": vault.owner_ens,
             "ds_proxy_address": vault.ds_proxy_address,
             "protection_service": vault.protection_service,
             "protection_score": vault.protection_score,
