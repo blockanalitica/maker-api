@@ -4,7 +4,7 @@
 
 from django.contrib import admin
 
-from .models import ForumPost, VaultOwner
+from .models import ForumPost, VaultOwner, VaultOwnerGroup
 
 
 @admin.register(ForumPost)
@@ -29,6 +29,18 @@ class VaultOwnerAdmin(admin.ModelAdmin):
         "address",
         "name",
         "ens",
+        "tags",
+        "created",
+    ]
+
+
+@admin.register(VaultOwnerGroup)
+class VaultOwnerGroupAdmin(admin.ModelAdmin):
+    search_fields = ["name", "slug", "tags"]
+    readonly_fields = ("slug",)
+    list_display = [
+        "name",
+        "slug",
         "tags",
         "created",
     ]

@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from maker.models import Ilk, Vault, VaultOwner
+from maker.models import Ilk, Vault, VaultOwnerGroup
 
 
 class WhalesView(APIView):
@@ -20,13 +20,15 @@ class WhalesView(APIView):
             is_active=True, type__in=["lp", "asset"], is_stable=False
         ).aggregate(Sum("dai_debt"))["dai_debt__sum"]
         results = []
-        for owner in VaultOwner.objects.filter(tags__contains=["whale"]):
+
+        for group in VaultOwnerGroup.objects.filter(tags__contains=["whale"]):
+            addresses = group.addresses.all().values_list("address", flat=True)
             data = Vault.objects.filter(
-                owner_address__iexact=owner.address, is_active=True
+                owner_address__in=addresses, is_active=True
             ).aggregate(number_of_vaults=Count("id"), total_debt=Sum("debt"))
 
             collateral_symbols = Vault.objects.filter(
-                owner_address=owner.address, is_active=True
+                owner_address__in=addresses, is_active=True
             ).values_list("collateral_symbol", flat=True)
 
             if data["number_of_vaults"] == 0:
@@ -34,8 +36,8 @@ class WhalesView(APIView):
 
             results.append(
                 {
-                    "name": owner.name,
-                    "address": owner.address,
+                    "name": group.name,
+                    "slug": group.slug,
                     "number_of_vaults": data["number_of_vaults"],
                     "total_debt": data["total_debt"],
                     "share": data["total_debt"] / total_risky_debt,

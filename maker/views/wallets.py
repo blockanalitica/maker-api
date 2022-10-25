@@ -7,24 +7,44 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from maker.models import Vault, VaultEventState, VaultOwner
+from maker.models import Vault, VaultEventState, VaultOwner, VaultOwnerGroup
 from maker.utils.views import PaginatedApiView, fetch_all
 
 
-class WalletView(APIView):
-    def get(self, request, address):
-        owner = get_object_or_404(VaultOwner, address=address)
+class WalletMixin(object):
+    def get_base_queryset(self, request, address):
+        self.owner = None
+        self.owner_group = None
+        addresses = []
+        if len(address) == 42 and address.startswith("0x"):
+            self.owner = get_object_or_404(VaultOwner, address=address)
+            addresses = [self.owner.address]
+        else:
+            self.owner_group = get_object_or_404(VaultOwnerGroup, slug=address)
+            addresses = list(
+                self.owner_group.addresses.all().values_list("address", flat=True)
+            )
+
         all_vaults = self.request.GET.get("all_vaults")
         filters = {}
         if all_vaults != "1":
             filters["is_active"] = True
 
-        vaults = Vault.objects.filter(owner_address=owner.address, **filters).values(
+        queryset = Vault.objects.filter(owner_address__in=addresses, **filters)
+        return queryset
+
+
+class WalletView(WalletMixin, APIView):
+    def get(self, request, address):
+        queryset = self.get_base_queryset(request, address)
+        vaults = queryset.values(
             "uid",
             "ilk",
             "collateral_symbol",
             "owner_address",
             "owner_name",
+            "owner_ens",
+            "ds_proxy_address",
             "collateral",
             "debt",
             "collateralization",
@@ -36,28 +56,31 @@ class WalletView(APIView):
             "osm_price",
         )
 
+        if self.owner:
+            name = self.owner.name
+            ens = self.owner.ens
+            owner_address = self.owner.address
+            slug = None
+        else:
+            name = self.owner_group.name
+            ens = None
+            owner_address = None
+            slug = self.owner_group.slug
+
         data = {
             "vaults": vaults,
-            "name": owner.name,
-            "ens": owner.ens,
-            "address": owner.address,
+            "name": name,
+            "ens": ens,
+            "address": owner_address,
+            "slug": slug,
         }
         return Response(data, status.HTTP_200_OK)
 
 
-class WalletDebtHistoryView(APIView):
+class WalletDebtHistoryView(WalletMixin, APIView):
     def get(self, request, address):
-        owner = get_object_or_404(VaultOwner, address=address)
-        all_vaults = self.request.GET.get("all_vaults")
-        filters = {}
-        if all_vaults != "1":
-            filters["is_active"] = True
-
-        vault_uids = list(
-            Vault.objects.filter(owner_address=owner.address, **filters).values_list(
-                "uid", flat=True
-            )
-        )
+        queryset = self.get_base_queryset(request, address)
+        vault_uids = list(queryset.values_list("uid", flat=True))
         sql = """
             SELECT
                   a.timestamp
@@ -69,6 +92,8 @@ class WalletDebtHistoryView(APIView):
                     DISTINCT(timestamp)
                 FROM maker_vaulteventstate
                 WHERE vault_uid IN %s
+                UNION
+                SELECT cast(extract(epoch from current_timestamp) as integer) as timestamp
             ) a
             CROSS JOIN (
                 SELECT DISTINCT(vault_uid), ilk
@@ -94,24 +119,15 @@ class WalletDebtHistoryView(APIView):
         return Response(data, status.HTTP_200_OK)
 
 
-class WalletEventsView(PaginatedApiView):
+class WalletEventsView(WalletMixin, PaginatedApiView):
     default_order = "-datetime"
     ordering_fields = [
         "datetime",
     ]
 
     def get_queryset(self, **kwargs):
-        owner = get_object_or_404(VaultOwner, address=kwargs["address"])
-        all_vaults = self.request.GET.get("all_vaults")
-        filters = {}
-        if all_vaults != "1":
-            filters["is_active"] = True
-
-        vault_uids = list(
-            Vault.objects.filter(owner_address=owner.address, **filters).values_list(
-                "uid", flat=True
-            )
-        )
+        queryset = self.get_base_queryset(self.request, kwargs["address"])
+        vault_uids = list(queryset.values_list("uid", flat=True))
         return VaultEventState.objects.filter(vault_uid__in=vault_uids).values(
             "datetime",
             "operation",

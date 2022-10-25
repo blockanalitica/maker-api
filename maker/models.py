@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: © 2022 Dai Foundation <www.daifoundation.org>
 #
 # SPDX-License-Identifier: Apache-2.0
-
+from autoslug import AutoSlugField
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from model_utils.models import TimeStampedModel, UUIDModel
@@ -552,11 +552,26 @@ class VaultProtectionScore(TimeStampedModel):
         ]
 
 
+class VaultOwnerGroup(TimeStampedModel):
+    name = models.CharField(max_length=256)
+    slug = AutoSlugField(populate_from="name", unique=True)
+    tags = ArrayField(models.CharField(max_length=20), default=list, blank=True)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: name={self.name} slug={self.slug}>"
+
+    def __str__(self):
+        return self.slug
+
+
 class VaultOwner(TimeStampedModel):
     address = models.CharField(max_length=42, unique=True)
-    name = models.CharField(max_length=256, null=True)
+    name = models.CharField(max_length=256, null=True, blank=True)
     ens = models.CharField(max_length=64, null=True)
-    tags = ArrayField(models.CharField(max_length=20), default=list)
+    tags = ArrayField(models.CharField(max_length=20), default=list, blank=True)
+    group = models.ForeignKey(
+        "VaultOwnerGroup", on_delete=models.CASCADE, related_name="addresses", null=True
+    )
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: address={self.address} name={self.name}>"
