@@ -43,7 +43,7 @@ def save_ilks():
             collateral_type = "psm"
         elif collateral["is_uni_v2"] or "CRVV1" in ilk or "GUNI" in ilk:
             collateral_type = "lp"
-        elif collateral["is_rwa"]:
+        elif collateral["is_rwa"] or ilk.startswith("RWA"):
             collateral_type = "rwa"
         elif collateral["is_sc"]:
             collateral_type = "stable"
