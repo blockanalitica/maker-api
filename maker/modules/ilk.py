@@ -168,10 +168,11 @@ def save_stats_for_vault(ilk):
     capital_at_risk_7d_avg = rp["capital_at_risk_7d_avg"] or 0
     capital_at_risk_30d_avg = rp["capital_at_risk_30d_avg"] or 0
 
+    dt = datetime.now()
     IlkHistoricStats.objects.create(
         ilk=ilk,
-        datetime=datetime.now(),
-        timestamp=datetime.now().timestamp(),
+        datetime=dt,
+        timestamp=dt.timestamp(),
         total_debt=stats["total_debt"],
         vaults_count=stats["vaults_count"],
         weighted_collateralization_ratio=stats["weighted_collateralization_ratio"],
@@ -185,16 +186,6 @@ def save_stats_for_vault(ilk):
         capital_at_risk_7d_avg=capital_at_risk_7d_avg,
         capital_at_risk_30d_avg=capital_at_risk_30d_avg,
     )
-
-
-def save_stats_for_other_ilks():
-    for ilk in Ilk.objects.filter(type__in=["psm", "d3m"]):
-        IlkHistoricStats.objects.create(
-            ilk=ilk,
-            datetime=datetime.now(),
-            timestamp=datetime.now().timestamp(),
-            total_debt=ilk.dai_debt,
-        )
 
 
 def get_liquidation_curve(ilk, type="total"):

@@ -358,6 +358,7 @@ class IlkHistoricStats(TimeStampedModel):
     risk_premium_30d_avg = models.DecimalField(
         max_digits=32, decimal_places=18, null=True
     )
+    dc_iam_line = models.BigIntegerField(null=True)
 
     class Meta:
         get_latest_by = "datetime"
