@@ -17,6 +17,7 @@ from .models import (
     Asset,
     GasPrice,
     Ilk,
+    IlkHistoricStats,
     MakerAsset,
     Medianizer,
     OHLCVPair,
@@ -41,7 +42,7 @@ from .modules.discord import (
     send_vaults_at_risk_alert,
 )
 from .modules.events import save_events, sync_vault_event_states
-from .modules.ilk import save_stats_for_other_ilks, save_stats_for_vault
+from .modules.ilk import save_stats_for_vault
 from .modules.ilks import create_or_update_vaults, save_ilks, sync_vaults_with_defisaver
 from .modules.liquidations import (
     save_maker_liquidations,
@@ -355,7 +356,17 @@ def sync_medianizer_prices_task():
 def save_ilk_stats_task():
     for ilk in Ilk.objects.with_vaults().values_list("ilk", flat=True):
         save_stats_for_vault(ilk)
-    save_stats_for_other_ilks()
+
+    dt = datetime.now()
+    # Opposite query of `with_vaults` from ILKManager
+    for ilk in Ilk.objects.exclude(type__in=["asset", "lp", "stable", "lp-stable"]):
+        IlkHistoricStats.objects.create(
+            ilk=ilk,
+            datetime=dt,
+            timestamp=dt.timestamp(),
+            total_debt=ilk.dai_debt,
+            dc_iam_line=ilk.dc_iam_line,
+        )
 
 
 @app.task
