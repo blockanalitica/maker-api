@@ -44,7 +44,7 @@ class IlksView(APIView):
             filters = {"type": "asset"}
         ilks = (
             Ilk.objects.filter(is_active=True, **filters)
-            .exclude(type="rwa")
+            .exclude(type__in=["rwa", "teleport"])
             .values(
                 "ilk",
                 "name",
