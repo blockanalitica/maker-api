@@ -250,7 +250,7 @@ class IlkEventStatsView(APIView):
 
         sql = """
             SELECT
-                  operation
+                operation
                 , DATE_TRUNC('day', datetime) as dt
                 , CASE
                     WHEN operation IN ('DEPOSIT', 'WITHDRAW')
@@ -264,9 +264,10 @@ class IlkEventStatsView(APIView):
                   END as amount_usd
             FROM maker_rawevent
             WHERE datetime::date >= %s
-              AND ilk = %s
-              AND operation IN ('DEPOSIT', 'WITHDRAW', 'GENERATE', 'PAYBACK')
+                AND ilk = %s
+                AND operation IN ('DEPOSIT', 'WITHDRAW', 'GENERATE', 'PAYBACK')
             GROUP BY 1, 2
+            ORDER BY 2
         """
         with connection.cursor() as cursor:
             cursor.execute(
