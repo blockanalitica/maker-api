@@ -21,6 +21,7 @@ from ..models import (
     MarketPrice,
     Vault,
     VaultOwner,
+    VaultOwnerGroup,
     VaultsLiquidation,
 )
 from ..modules.events import save_last_activity
@@ -134,12 +135,20 @@ def _upsert_and_fetch_owner_data(ilk):
         vault_map[str(vault["vault_uid"])] = {
             "ds_proxy": vault["ds_proxy"],
             "owner_address": vault["owner_address"],
+            "strategy": vault["strategy"],
+            "type": vault["type"],
         }
         if vault["owner_address"]:
             vault_owners[vault["owner_address"]] = {"ens": vault["owner_ens"]}
+            if vault["type"] == "yearn":
+                vault_owners[vault["owner_address"]]["group_slug"] = "yearn-strategies"
 
     for address, owner_data in vault_owners.items():
         owner, _ = VaultOwner.objects.get_or_create(address=address)
+        if owner.group is None and owner_data.get("group_slug") == "yearn-strategies":
+            group = VaultOwnerGroup.objects.get(slug="yearn-strategies")
+            owner.group = group
+            owner.save(update_fields=["group"])
         if owner.ens != owner_data["ens"]:
             owner.ens = owner_data["ens"]
             owner.save(update_fields=["ens"])
@@ -202,6 +211,7 @@ def create_or_update_vaults(ilk):
         "owner_ens",
         "owner_name",
         "is_institution",
+        "ds_proxy_name",
     ]
 
     osm_price = None
@@ -223,6 +233,8 @@ def create_or_update_vaults(ilk):
         if datalake_vault:
             vault.ds_proxy_address = datalake_vault["ds_proxy"]
             vault.owner_address = datalake_vault["owner_address"]
+            if datalake_vault["type"] == "yearn":
+                vault.ds_proxy_name = datalake_vault["strategy"]
 
             owner_data = owner_map.get(datalake_vault["owner_address"])
             if owner_data:

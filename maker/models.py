@@ -224,6 +224,7 @@ class Vault(TimeStampedModel):
     liquidation_drop = models.DecimalField(max_digits=4, decimal_places=2, null=True)
     is_institution = models.BooleanField(null=True, default=False)
     owner_name = models.CharField(max_length=64, null=True)
+    ds_proxy_name = models.CharField(max_length=64, null=True)
 
     last_activity = models.DateTimeField(null=True)
 
