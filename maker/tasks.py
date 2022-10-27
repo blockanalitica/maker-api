@@ -57,6 +57,7 @@ from .modules.ohlcv import (
 )
 from .modules.osm import save_medianizer_prices, save_osm_daily, save_osm_for_asset
 from .modules.pool import save_pool_info
+from .modules.psm import claculate_and_save_psm_dai_supply
 from .modules.risk import save_overall_stats, save_surplus_buffer
 from .modules.risk_premium import compute_all_vault_types
 from .modules.slippage import save_oneinch_slippages
@@ -259,6 +260,11 @@ def sync_pool_task(pool_id):
     save_pool_info(pool)
 
 
+@app.task
+def claculate_and_save_psm_dai_supply_task():
+    claculate_and_save_psm_dai_supply()
+
+
 #######################
 #   PERIODIC TASKS    #
 #######################
@@ -320,6 +326,7 @@ def sync_vaults_task():
     sync_vault_event_states()
     for ilk in Ilk.objects.with_vaults().values_list("ilk", flat=True):
         sync_ilk_vaults_task.delay(ilk)
+    claculate_and_save_psm_dai_supply_task.delay()
 
 
 @app.task
