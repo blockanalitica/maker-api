@@ -51,6 +51,7 @@ class VaultPositionsViewSerializer(serpy.DictSerializer):
     last_activity = serpy.Field()
     protection_service = serpy.Field()
     ds_proxy_address = serpy.Field()
+    ds_proxy_name = serpy.Field()
 
 
 class VaultEventsViewViewSerializer(serpy.DictSerializer):
@@ -78,6 +79,7 @@ class VaultView(APIView):
             "owner_name": vault.owner_name,
             "owner_ens": vault.owner_ens,
             "ds_proxy_address": vault.ds_proxy_address,
+            "ds_proxy_name": vault.ds_proxy_name,
             "protection_service": vault.protection_service,
             "protection_score": vault.protection_score,
             "symbol": (vault.ilk).split("-")[0],
@@ -162,6 +164,7 @@ class VaultPositionsView(PaginatedApiView):
             "owner_name",
             "last_activity",
             "protection_service",
+            "ds_proxy_name",
         )
 
     def get_additional_data(self, queryset, **kwargs):
@@ -221,6 +224,7 @@ class AllVaultPositionsView(PaginatedApiView):
             "owner_name",
             "last_activity",
             "protection_service",
+            "ds_proxy_name",
         )
 
 

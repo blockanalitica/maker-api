@@ -54,6 +54,7 @@ class WalletView(WalletMixin, APIView):
             "last_activity",
             "protection_service",
             "osm_price",
+            "ds_proxy_name",
         )
 
         if self.owner:
