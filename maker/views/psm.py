@@ -10,12 +10,13 @@ import serpy
 from django.db import connection
 from django.db.models import F, Sum, Value
 from django.db.models.functions import TruncHour
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from maker.models import Asset, Ilk, IlkHistoricStats, RawEvent
-from maker.utils.views import PaginatedApiView, fetch_one
+from maker.utils.views import PaginatedApiView, fetch_all, fetch_one
 
 log = logging.getLogger(__name__)
 
@@ -55,6 +56,43 @@ class PSMEventsView(PaginatedApiView):
             "principal",
             "ilk",
         )
+
+
+class PSMEventStatsView(APIView):
+    def get(self, request, ilk):
+        ilk_obj = get_object_or_404(Ilk, ilk=ilk, is_active=True, type="psm")
+
+        days_ago = self.request.GET.get("days_ago")
+        try:
+            days_ago = int(days_ago)
+        except (TypeError, ValueError):
+            return Response(None, status.HTTP_400_BAD_REQUEST)
+
+        if days_ago not in [1, 7, 30]:
+            return Response(None, status.HTTP_400_BAD_REQUEST)
+
+        sql = """
+            SELECT
+                 operation
+                , DATE_TRUNC('day', datetime) as dt
+                , SUM(principal) as amount
+            FROM maker_rawevent
+            WHERE datetime::date >= %s
+                AND ilk = %s
+                AND operation IN ('PAYBACK', 'GENERATE')
+            GROUP BY 1, 2
+            ORDER BY 2
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(
+                sql,
+                [
+                    (datetime.now() - timedelta(days=days_ago)).date(),
+                    ilk_obj.ilk,
+                ],
+            )
+            events = fetch_all(cursor)
+        return Response(events, status.HTTP_200_OK)
 
 
 class PSMsView(APIView):
