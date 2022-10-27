@@ -1026,3 +1026,16 @@ class DEFILocked(TimeStampedModel):
 
     class Meta:
         get_latest_by = "timestamp"
+
+
+class PSMDAISupply(TimeStampedModel):
+    ilk = models.CharField(max_length=32, db_index=True)
+    datetime = models.DateTimeField(db_index=True)
+    timestamp = models.IntegerField()
+    total_supply = models.DecimalField(max_digits=32, decimal_places=18)
+    supply_change = models.DecimalField(max_digits=32, decimal_places=18)
+
+    class Meta:
+        unique_together = ["ilk", "datetime"]
+        get_latest_by = "datetime"
+        ordering = ["-datetime"]

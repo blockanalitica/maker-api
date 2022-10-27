@@ -15,7 +15,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from maker.models import Asset, Ilk, IlkHistoricStats, RawEvent
+from maker.models import Asset, Ilk, IlkHistoricStats, PSMDAISupply, RawEvent
 from maker.utils.views import PaginatedApiView, fetch_all, fetch_one
 
 log = logging.getLogger(__name__)
@@ -93,6 +93,30 @@ class PSMEventStatsView(APIView):
             )
             events = fetch_all(cursor)
         return Response(events, status.HTTP_200_OK)
+
+
+class PSMDAISupplyHistoryView(APIView):
+    def get(self, request, ilk):
+        ilk_obj = get_object_or_404(Ilk, ilk=ilk, is_active=True, type="psm")
+
+        days_ago = self.request.GET.get("days_ago")
+        try:
+            days_ago = int(days_ago)
+        except (TypeError, ValueError):
+            return Response(None, status.HTTP_400_BAD_REQUEST)
+
+        if days_ago not in [7, 30, 90]:
+            return Response(None, status.HTTP_400_BAD_REQUEST)
+
+        debts = (
+            PSMDAISupply.objects.filter(
+                ilk=ilk_obj.ilk, datetime__gte=datetime.now() - timedelta(days=days_ago)
+            )
+            .values("datetime", "total_supply")
+            .order_by("-datetime")
+        )
+
+        return Response(debts, status.HTTP_200_OK)
 
 
 class PSMsView(APIView):

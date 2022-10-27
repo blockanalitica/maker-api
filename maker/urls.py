@@ -84,7 +84,12 @@ from .views.liquidations import (
     TakersView,
 )
 from .views.osm import OracleHistoricStatsView, OSMAsset, OSMTableView
-from .views.psm import PSMEventStatsView, PSMEventsView, PSMsView
+from .views.psm import (
+    PSMDAISupplyHistoryView,
+    PSMEventStatsView,
+    PSMEventsView,
+    PSMsView,
+)
 from .views.risk import CapitalAtRiskOverallIlkView, CapitalAtRiskOverallView, GasView
 from .views.risk import LiquidationCurveView as RiskLiquidationCurveView
 from .views.risk import MakerStatsView, PercentOfRiskyDebtView
@@ -444,6 +449,11 @@ urlpatterns = [
         "psms/<str:ilk>/event-stats/",
         PSMEventStatsView.as_view(),
         name="psm-event-stats",
+    ),
+    path(
+        "psms/<str:ilk>/dai-supply-history/",
+        PSMDAISupplyHistoryView.as_view(),
+        name="psm-dai-supply-history",
     ),
     path(
         "rates/",
