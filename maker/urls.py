@@ -88,6 +88,8 @@ from .views.psm import (
     PSMDAISupplyHistoryView,
     PSMEventStatsView,
     PSMEventsView,
+    PSMsDAISupplyHistoryView,
+    PSMsEventStatsView,
     PSMsView,
 )
 from .views.risk import CapitalAtRiskOverallIlkView, CapitalAtRiskOverallView, GasView
@@ -439,6 +441,16 @@ urlpatterns = [
         "psms/",
         PSMsView.as_view(),
         name="psms",
+    ),
+    path(
+        "psms/dai-supply-history/",
+        PSMsDAISupplyHistoryView.as_view(),
+        name="psms-dai-supply-history",
+    ),
+    path(
+        "psms/event-stats/",
+        PSMsEventStatsView.as_view(),
+        name="psms-event-stats",
     ),
     path(
         "psms/<str:ilk>/",

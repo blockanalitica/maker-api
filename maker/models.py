@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: © 2022 Dai Foundation <www.daifoundation.org>
 #
 # SPDX-License-Identifier: Apache-2.0
+
 from autoslug import AutoSlugField
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
@@ -133,8 +134,8 @@ class Ilk(TimeStampedModel):
     step = models.BigIntegerField(null=True)
     cut = models.DecimalField(null=True, decimal_places=4, max_digits=8)
 
-    fee_in = models.BigIntegerField(null=True)
-    fee_out = models.BigIntegerField(null=True)
+    fee_in = models.DecimalField(max_digits=8, decimal_places=4, null=True)
+    fee_out = models.DecimalField(max_digits=8, decimal_places=4, null=True)
 
     timestamp = models.BigIntegerField()
     type = models.CharField(max_length=32)
