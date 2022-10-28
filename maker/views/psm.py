@@ -175,6 +175,8 @@ class PSMsView(APIView):
                 "share",
                 "dc_iam_line",
                 "utilization",
+                "fee_in",
+                "fee_out",
             )
         )
 
@@ -233,3 +235,96 @@ class PSMsView(APIView):
             "stats": stats,
         }
         return Response(response, status.HTTP_200_OK)
+
+
+class PSMsDAISupplyHistoryView(APIView):
+    def get(self, request):
+        days_ago = self.request.GET.get("days_ago")
+        try:
+            days_ago = int(days_ago)
+        except (TypeError, ValueError):
+            return Response(None, status.HTTP_400_BAD_REQUEST)
+
+        if days_ago not in [7, 30, 90]:
+            return Response(None, status.HTTP_400_BAD_REQUEST)
+
+        ilks = list(
+            Ilk.objects.filter(type="psm", is_active=True).values_list("ilk", flat=True)
+        )
+
+        sql = """
+            SELECT
+                  x.datetime
+                , x.ilk
+                , y.total_supply
+            FROM (
+                SELECT
+                      a.datetime
+                    , ilk
+                FROM (
+                    SELECT
+                        DISTINCT(datetime)
+                    FROM maker_psmdaisupply
+                    WHERE ilk IN %s
+                    AND datetime >= %s
+                ) a
+                CROSS JOIN UNNEST(%s) ilk
+            ) x
+            LEFT JOIN LATERAL (
+                SELECT total_supply
+                FROM maker_psmdaisupply b
+                WHERE b.datetime <= x.datetime
+                AND b.ilk = x.ilk
+                ORDER BY b.datetime DESC
+                LIMIT 1
+            ) y
+            ON 1=1
+            ORDER BY x.datetime, x.ilk
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(
+                sql, [tuple(ilks), datetime.now() - timedelta(days=days_ago), ilks]
+            )
+            supplies = fetch_all(cursor)
+
+        return Response(supplies, status.HTTP_200_OK)
+
+
+class PSMsEventStatsView(APIView):
+    def get(self, request):
+        days_ago = self.request.GET.get("days_ago")
+        try:
+            days_ago = int(days_ago)
+        except (TypeError, ValueError):
+            return Response(None, status.HTTP_400_BAD_REQUEST)
+
+        if days_ago not in [7, 30, 90]:
+            return Response(None, status.HTTP_400_BAD_REQUEST)
+
+        ilks = Ilk.objects.filter(type="psm", is_active=True).values_list(
+            "ilk", flat=True
+        )
+
+        sql = """
+            SELECT
+                 operation
+                , ilk
+                , DATE_TRUNC('day', datetime) AS dt
+                , SUM(principal) AS amount
+            FROM maker_rawevent
+            WHERE datetime::date >= %s
+                AND ilk IN %s
+                AND operation IN ('PAYBACK', 'GENERATE')
+            GROUP BY 1, 2, 3
+            ORDER BY 3, 2 DESC
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(
+                sql,
+                [
+                    (datetime.now() - timedelta(days=days_ago)).date(),
+                    tuple(ilks),
+                ],
+            )
+            events = fetch_all(cursor)
+        return Response(events, status.HTTP_200_OK)
