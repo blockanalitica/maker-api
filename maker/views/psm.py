@@ -178,6 +178,7 @@ class PSMsView(APIView):
                 "fee_in",
                 "fee_out",
             )
+            .order_by("-dai_debt")
         )
 
         stats = {
