@@ -348,7 +348,15 @@ class VaultCrHistoryView(APIView):
                     "amount": cr,
                 }
             )
-        return Response(data, status.HTTP_200_OK)
+
+        events = VaultEventState.objects.filter(
+            ilk=ilk, vault_uid=uid, timestamp__gte=start_cr
+        ).values(
+            "timestamp",
+            "human_operation",
+        )
+        response = {"results": data, "events": events}
+        return Response(response, status.HTTP_200_OK)
 
 
 class VaultsProtectionScoreHistoryView(APIView):
@@ -396,4 +404,11 @@ class VaultDebtHistoryView(APIView):
             .values("after_principal", "timestamp")
             .order_by("timestamp")
         )
-        return Response(debts, status.HTTP_200_OK)
+
+        events = VaultEventState.objects.filter(ilk=ilk, vault_uid=uid).values(
+            "timestamp",
+            "human_operation",
+        )
+
+        response = {"debts": debts, "events": events}
+        return Response(response, status.HTTP_200_OK)
