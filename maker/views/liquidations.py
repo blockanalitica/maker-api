@@ -7,6 +7,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 import serpy
+from django.core.cache import cache
 from django.db.models import F, Q
 from django.db.models.aggregates import Avg, Count, Func, Sum
 from django.db.models.functions import TruncDay, TruncMonth, TruncQuarter, TruncWeek
@@ -730,9 +731,22 @@ class TakersView(APIView):
 
 class AuctionTakersKeepersView(APIView):
     def get(self, request):
-        first_auction = Auction.objects.all().order_by("auction_start").first()
-        dt = first_auction.auction_start.date()
-        data = []
+        cache_key = "AuctionTakersKeepersView.keepers_takers_data"
+        data = cache.get(cache_key, [])
+        date_start = None
+        if data:
+            # We're up to date, just return response
+            if data[-1]["date"] == date.today():
+                return Response(data, status.HTTP_200_OK)
+
+            date_start = data[-1]["date"] + timedelta(days=1)
+
+        if not date_start:
+            first_auction = Auction.objects.all().order_by("auction_start").first()
+            date_start = first_auction.auction_start.date()
+
+        dt = date_start
+
         while dt <= date.today():
             auctions = Auction.objects.filter(auction_start__date__lt=dt)[
                 :100
@@ -748,6 +762,7 @@ class AuctionTakersKeepersView(APIView):
             data.append(auctions)
             dt += timedelta(days=1)
 
+        cache.set(cache_key, data, None)
         return Response(data, status.HTTP_200_OK)
 
 
