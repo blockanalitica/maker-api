@@ -62,6 +62,7 @@ class LiquidationsSerializer(serpy.DictSerializer):
     debt_token_price = serpy.Field()
     debt_repaid = serpy.Field()
     debt_repaid_usd = serpy.Field()
+    penalty = serpy.Field()
 
     collateral_symbol = serpy.StrField()
     ilk = serpy.StrField()
@@ -179,6 +180,7 @@ class LiquidationsView(PaginatedApiView):
                 "ilk",
                 "finished",
                 "uid",
+                "penalty",
             )
         )
 
