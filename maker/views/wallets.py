@@ -55,6 +55,12 @@ class WalletView(WalletMixin, APIView):
             "protection_service",
             "osm_price",
             "ds_proxy_name",
+            "collateral_change_1d",
+            "collateral_change_7d",
+            "collateral_change_30d",
+            "principal_change_1d",
+            "principal_change_7d",
+            "principal_change_30d",
         )
 
         if self.owner:
