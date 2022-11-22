@@ -215,6 +215,7 @@ def create_or_update_vaults(ilk):
     ]
 
     osm_price = None
+    osm = None
     if ilk_obj.type in ["asset", "lp"]:
         osm = OSM.objects.filter(symbol=ilk_obj.collateral).latest()
         osm_price = min(osm.current_price, osm.next_price)
