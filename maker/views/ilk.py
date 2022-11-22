@@ -83,12 +83,12 @@ class IlksView(APIView):
 
             else:
                 ilk["dai_debt"] = ilk["total_debt"]
-                if ilk["capital_at_risk"]:
+                if ilk["capital_at_risk"] and stats:
                     ilk["capital_at_risk_change"] = stats.capital_at_risk
                     ilk["capital_at_risk_diff"] = round(
                         ilk["capital_at_risk"] - stats.capital_at_risk
                     )
-                if ilk["risk_premium"]:
+                if ilk["risk_premium"] and stats:
                     ilk["risk_premium_change"] = stats.risk_premium
                     ilk["risk_premium_diff"] = round(
                         ilk["risk_premium"] - stats.risk_premium, 2
