@@ -45,6 +45,7 @@ VAULT_TYPE_TO_VAULT_ASSET_MAPPER = {
     "RENBTC-A": "WBTC",
     "WSTETH-A": "stETH",
     "WSTETH-B": "stETH",
+    "RETH-A": "RETH",
 }
 
 VAULT_ASSET_TO_VAULT_TYPE_MAPPER = {
@@ -56,6 +57,7 @@ VAULT_ASSET_TO_VAULT_TYPE_MAPPER = {
     "UNI": ["UNI-A"],
     "WBTC": ["WBTC-A", "RENBTC-A", "WBTC-B", "WBTC-C"],
     "stETH": ["WSTETH-A", "ETH-A", "ETH-B", "ETH-C", "WSTETH-B"],
+    "RETH": ["RETH-A"],
 }
 
 DEFAULT_SCENARIO_PARAMS = {
@@ -80,6 +82,11 @@ DEFAULT_SCENARIO_PARAMS = {
         "keeper_profit": 0.05,
     },
     "WSTETH-B": {
+        "jump_severity": -0.5,
+        "jump_frequency": 2,
+        "keeper_profit": 0.05,
+    },
+    "RETH-A": {
         "jump_severity": -0.5,
         "jump_frequency": 2,
         "keeper_profit": 0.05,
