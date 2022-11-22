@@ -261,12 +261,18 @@ def create_or_update_vaults(ilk):
         vault.principal = Decimal(str(data["principal"]))
         vault.accrued_fees = Decimal(str(data["accrued_fees"]))
         vault.paid_fees = Decimal(str(data["paid_fees"]))
+
+        if osm:
+            vault.osm_price = Decimal(osm.current_price)
+        else:
+            vault.osm_price = (
+                Decimal(str(data["osm_price"])) if data["osm_price"] else None
+            )
         vault.collateralization = (
-            Decimal(str(data["collateralization"]))
-            if data["collateralization"]
+            ((vault.collateral * vault.osm_price) / vault.debt) * 100
+            if vault.debt
             else None
         )
-        vault.osm_price = Decimal(str(data["osm_price"])) if data["osm_price"] else None
         vault.mkt_price = market_price
         vault.ratio = Decimal(str(data["ratio"])) if data["ratio"] else None
         vault.liquidation_price = (
