@@ -9,7 +9,7 @@ from django_bulk_load import bulk_insert_models, bulk_update_models
 from maker.utils.metrics import auto_named_statsd_timer
 from maker.utils.utils import calculate_rate
 
-from ..models import RawEvent, Vault, VaultEventState
+from ..models import OSM, RawEvent, Vault, VaultEventState
 from ..sources.dicu import MCDSnowflake
 
 
@@ -335,6 +335,8 @@ def sync_vault_event_balances(from_block):
             osm_price = event.osm_price
             if "RWA" in event.ilk or "PSM" in event.ilk or "DIRECT" in event.ilk:
                 osm_price = 1
+            if not osm_price:
+                osm_price = OSM.objects.filter(ilk=event.ilk).latest().current_price
             if before_collateral > 0 and before_principal > 0:
                 before_ratio = round(
                     ((before_collateral * osm_price) / before_principal * 100),
