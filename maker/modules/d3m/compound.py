@@ -7,7 +7,7 @@ from decimal import Decimal
 import numpy as np
 import pandas as pd
 
-from maker.sources.blockanalitica import fetch_compound_d3m_dai_stats
+from maker.utils.blockchain.chain import Blockchain
 
 
 def get_d3m_short_info():
@@ -26,7 +26,7 @@ def get_d3m_short_info():
 
 def get_d3m_info():
     data = get_d3m_short_info()
-    stats = fetch_compound_d3m_dai_stats()
+    stats = get_compound_dai_market()
     data.update(stats)
     return data
 
@@ -38,6 +38,66 @@ BLOCKS_PER_YEAR = 2407328
 def from_apy_to_apr(apy, num_of_compounds):
     apr = num_of_compounds * ((1 + apy) ** Decimal(str((1 / num_of_compounds))) - 1)
     return apr
+
+
+def get_compound_dai_market():
+    token_address = "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643"
+    token_calls = []
+    token_calls.append(
+        (
+            token_address,
+            [
+                "totalSupply()(uint256)",
+            ],
+            ["total_supply", None],
+        )
+    )
+    token_calls.append(
+        (
+            token_address,
+            [
+                "totalBorrows()(uint256)",
+            ],
+            ["total_borrow", None],
+        )
+    )
+    token_calls.append(
+        (
+            token_address,
+            [
+                "exchangeRateStored()(uint256)",
+            ],
+            ["exchange_rate", None],
+        )
+    )
+    token_calls.append(
+        (
+            token_address,
+            [
+                "borrowRatePerBlock()(uint256)",
+            ],
+            ["borrow_rate", None],
+        )
+    )
+    token_calls.append(
+        (
+            token_address,
+            [
+                "supplyRatePerBlock()(uint256)",
+            ],
+            ["supply_rate", None],
+        )
+    )
+
+    w3 = Blockchain()
+    data = w3.call_multicall(token_calls)
+    data["total_supply"] = (data["total_supply"] / 10**8) * (
+        data["exchange_rate"] / 10**28
+    )
+    data["total_borrow"] = data["total_borrow"] / 10**18
+    data["supply_rate"] = data["supply_rate"] * BLOCKS_PER_YEAR / 1e18
+    data["borrow_rate"] = data["borrow_rate"] * BLOCKS_PER_YEAR / 1e18
+    return data
 
 
 class D3MCompoundCompute:
@@ -53,7 +113,7 @@ class D3MCompoundCompute:
 
     def get_rates(self):
         if not self._rates:
-            rate = fetch_compound_d3m_dai_stats()
+            rate = get_compound_dai_market()
             self._rates = {
                 "total_supply": Decimal(str(rate["total_supply"])),
                 "total_borrow": Decimal(str(rate["total_borrow"])),
