@@ -12,7 +12,7 @@ import numpy as np
 import psweep as ps
 import pytz
 from django.core.cache import cache
-from django.db.models import Avg, F, Max, Min, Sum
+from django.db.models import Avg, F, Max, Min, Q, Sum
 
 from maker.models import OSM, Auction, AuctionAction
 from maker.modules.slippage import get_slippage_for_lp, get_slippage_to_dai
@@ -657,7 +657,9 @@ def save_auctions(backpopulate=False):
     else:
         try:
             from_datetime = (
-                Auction.objects.filter(finished=False).latest().auction_start
+                Auction.objects.filter(Q(finished=False) | Q(finished=None))
+                .latest()
+                .auction_start
             )
         except Auction.DoesNotExist:
             from_datetime = Auction.objects.filter(finished=True).latest().auction_start
