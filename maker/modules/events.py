@@ -333,7 +333,12 @@ def sync_vault_event_balances(from_block):
                 after_principal = 0
 
             osm_price = event.osm_price
-            if "RWA" in event.ilk or "PSM" in event.ilk or "DIRECT" in event.ilk:
+            if (
+                "RWA" in event.ilk
+                or "PSM" in event.ilk
+                or "DIRECT" in event.ilk
+                or "TELEPORT" in event.ilk
+            ):
                 osm_price = 1
             if not osm_price:
                 ilk_obj = Ilk.objects.get(ilk=event.ilk)

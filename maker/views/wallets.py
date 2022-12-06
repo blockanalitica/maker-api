@@ -88,6 +88,10 @@ class WalletDebtHistoryView(WalletMixin, APIView):
     def get(self, request, address):
         queryset = self.get_base_queryset(request, address)
         vault_uids = list(queryset.values_list("uid", flat=True))
+
+        if not vault_uids:
+            return Response(None, status.HTTP_200_OK)
+
         sql = """
             SELECT
                   a.timestamp
