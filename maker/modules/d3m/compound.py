@@ -73,7 +73,7 @@ def get_d3m_short_info():
         "balance": balance,
         "max_debt_ceiling": d3m_data.max_debt_ceiling,
         "target_borrow_rate": d3m_data.target_borrow_rate,
-        "symbol": "cDAI",
+        "symbol": "DAI",
         "title": "Compound",
         "utilization": balance / d3m_data.max_debt_ceiling,
         "pending": False,
