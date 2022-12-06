@@ -777,7 +777,8 @@ def get_auction(ilk, auction_uid):
         "penalty_fee": auction.penalty_fee,
         "debt_liquidated": auction.debt_liquidated,
         "penalty_fee_per": (auction.penalty_fee or 0) / auction.debt_liquidated,
-        "coll_returned": auction.available_collateral / auction.kicked_collateral,
+        "coll_returned": (auction.available_collateral or 0)
+        / auction.kicked_collateral,
         "symbol": auction.symbol,
     }
     kicks = AuctionAction.objects.filter(
