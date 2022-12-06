@@ -2,25 +2,81 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from datetime import datetime
 from decimal import Decimal
 
 import numpy as np
 import pandas as pd
+from eth_utils import to_bytes
 
+from maker.constants import MCD_VAT_CONTRACT_ADDRESS, MKR_DC_IAM_CONTRACT_ADDRESS
+from maker.models import D3M
 from maker.utils.blockchain.chain import Blockchain
+
+D3M_COMP = "0x621fE4Fde2617ea8FFadE08D0FF5A862aD287EC2"
+
+
+def get_d3m_contract_data():
+    chain = Blockchain()
+
+    # Debt ceiling
+    vat_contract = chain.get_contract(MCD_VAT_CONTRACT_ADDRESS)
+    data = vat_contract.caller.ilks(to_bytes(text="DIRECT-COMPV2-DAI"))
+    debt_ceiling = Decimal(data[3]) / 10**45
+
+    dc_iam_contract = chain.get_contract(MKR_DC_IAM_CONTRACT_ADDRESS)
+    data = dc_iam_contract.caller.ilks(to_bytes(text="DIRECT-COMPV2-DAI"))
+    max_debt_ceiling = Decimal(data[0]) / 10**45  # line
+
+    # d3m_contract = chain.get_contract(AAVE_D3M_CONTRACT_ADDRESS)
+    # target_borrow_rate = chain.convert_ray(d3m_contract.caller.bar())
+
+    return {
+        "debt_ceiling": debt_ceiling,
+        "max_debt_ceiling": max_debt_ceiling,
+        "target_borrow_rate": "0.02",
+        "block_number": chain.get_latest_block(),
+    }
+
+
+def get_current_balance():
+    chain = Blockchain()
+
+    contract = chain.get_contract(
+        "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643", abi_type="ceth"
+    )
+    data = contract.caller.balanceOf(D3M_COMP)
+
+    exchange_rate = contract.caller.exchangeRateStored()
+    return (Decimal(data) / Decimal(1e8)) * (Decimal(exchange_rate) / Decimal(1e28))
+
+
+def save_d3m():
+    data = get_d3m_contract_data()
+    dt = datetime.now()
+    balance = get_current_balance()
+    D3M.objects.create(
+        timestamp=dt.timestamp(),
+        datetime=dt,
+        protocol="compound",
+        balance=balance,
+        **data,
+    )
 
 
 def get_d3m_short_info():
+    d3m_data = D3M.objects.filter(protocol="compound").latest()
+    balance = get_current_balance()
     return {
         "protocol": "Compound",
         "protocol_slug": "compound",
-        "balance": 0,
-        "max_debt_ceiling": Decimal("0"),
-        "target_borrow_rate": Decimal("0"),
+        "balance": balance,
+        "max_debt_ceiling": d3m_data.max_debt_ceiling,
+        "target_borrow_rate": d3m_data.target_borrow_rate,
         "symbol": "cDAI",
         "title": "Compound",
-        "utilization": 0,
-        "pending": True,
+        "utilization": balance / d3m_data.max_debt_ceiling,
+        "pending": False,
     }
 
 
@@ -97,6 +153,7 @@ def get_compound_dai_market():
     data["total_borrow"] = data["total_borrow"] / 10**18
     data["supply_rate"] = data["supply_rate"] * BLOCKS_PER_YEAR / 1e18
     data["borrow_rate"] = data["borrow_rate"] * BLOCKS_PER_YEAR / 1e18
+    data["exchange_rate"] = data["exchange_rate"]
     return data
 
 
@@ -110,6 +167,7 @@ class D3MCompoundCompute:
         self._defi_rate = None
         self._rates = None
         self._d3m_balance = None
+        self._d3m_model = None
 
     def get_rates(self):
         if not self._rates:
@@ -117,8 +175,15 @@ class D3MCompoundCompute:
             self._rates = {
                 "total_supply": Decimal(str(rate["total_supply"])),
                 "total_borrow": Decimal(str(rate["total_borrow"])),
+                "borrow_rate": Decimal(str(rate["borrow_rate"])),
             }
         return self._rates
+
+    @property
+    def d3m_model(self):
+        if not self._d3m_model:
+            self._d3m_model = D3M.objects.filter(protocol="aave").latest()
+        return self._d3m_model
 
     def get_d3m_balance(self):
         if not self._d3m_balance:
@@ -189,12 +254,30 @@ class D3MCompoundCompute:
                     "borrow_rate"
                 ]
 
-    def compute_metrics(self, target_borrow_rate, d3m_dc):
+    def compute_metrics(self, target_borrow_rate, d3m_dc, heatmap=False):
         rates = self.get_rates()
-        d3m_balance = self.get_d3m_balance() if self.get_d3m_balance() else 0
-        d3m_current_dai = max(0, d3m_balance.dai_total) if self.get_d3m_balance() else 0
+        unwind = False
+        if not heatmap:
+            if target_borrow_rate > rates["borrow_rate"]:
+                unwind = True
+        old_current_dai = max(0, self.d3m_model.balance)
+        if unwind:
+            d3m_current_dai = 0
+            d3m_dc_additional = max(0, d3m_dc - d3m_current_dai)
+            dai_supply = rates["total_supply"] - max(0, self.d3m_model.balance)
+            dai_borrow = rates["total_borrow"]
+        else:
+            d3m_current_dai = max(0, self.d3m_model.balance)
+            d3m_dc_additional = max(0, d3m_dc - d3m_current_dai)
+            dai_supply = rates["total_supply"]
+            dai_borrow = rates["total_borrow"]
+
+        if target_borrow_rate == 0:
+            d3m_dc_additional = 0
+        # d3m_balance = self.get_d3m_balance() if self.get_d3m_balance() else 0
+        # d3m_current_dai = max(0, d3m_balance.dai_total) if self.get_d3m_balance() else 0
         d3m_dc_additional = max(0, d3m_dc - d3m_current_dai)
-        simulation_dai_borrow = Decimal(int(rates["total_borrow"]))
+        simulation_dai_borrow = Decimal(int(dai_borrow))
         d3m_supply_needed = Decimal(
             max(
                 int(
@@ -202,13 +285,13 @@ class D3MCompoundCompute:
                         simulation_dai_borrow
                         / self.get_utilization_rate_gte(target_borrow_rate)
                     )
-                    - rates["total_supply"]
+                    - dai_supply
                 ),
                 0,
             ),
         )
         d3m_exposure = min(d3m_dc_additional, d3m_supply_needed)
-        simulation_dai_supply = Decimal(int(rates["total_supply"] + d3m_exposure))
+        simulation_dai_supply = Decimal(int(dai_supply + d3m_exposure))
         simulation_utilization_rate = round(
             simulation_dai_borrow / simulation_dai_supply, 6
         )
@@ -222,9 +305,9 @@ class D3MCompoundCompute:
             * Decimal(str((1 - RESERVE_FACTOR))),
             6,
         )
-        simulation_dai_supply_target = rates["total_supply"] + d3m_supply_needed
+        simulation_dai_supply_target = dai_supply + d3m_supply_needed
         simulation_utilization_rate_target = round(
-            rates["total_borrow"] / simulation_dai_supply_target, 6
+            dai_borrow / simulation_dai_supply_target, 6
         )
         implied_supply_rate = round(
             simulation_utilization_rate_target
@@ -238,7 +321,7 @@ class D3MCompoundCompute:
             d3m_exposure + d3m_current_dai
         )
 
-        return {
+        data = {
             "d3m_dc": d3m_dc,
             "target_borrow_rate": target_borrow_rate,
             "simulation_dai_borrow": simulation_dai_borrow,
@@ -256,3 +339,9 @@ class D3MCompoundCompute:
             "d3m_balance": d3m_current_dai,
             "d3m_exposure_total": d3m_current_dai + d3m_exposure,
         }
+
+        if unwind:
+            data["d3m_exposure_total"] = d3m_exposure
+            data["d3m_balance"] = old_current_dai
+            data["d3m_exposure"] = d3m_exposure - old_current_dai
+        return data
