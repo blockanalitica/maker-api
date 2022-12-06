@@ -105,7 +105,7 @@ SCHEDULE = {
         "schedule": crontab(minute="*/10"),
     },
     "save_maker_liquidations_task": {
-        "schedule": crontab(minute="*/15"),
+        "schedule": crontab(minute="*/5"),
     },
     "save_asset_market_caps_task": {
         "schedule": crontab(minute="*/30"),
