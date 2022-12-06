@@ -22,7 +22,7 @@ def save_maker_liquidations(backpopulate=False):
             Q(finished=False) | Q(finished=None), protocol="maker"
         )
         .order_by("block_number")
-        .last()
+        .first()
     )
     latest_block_number = 0
     if not latest_liquidation:
