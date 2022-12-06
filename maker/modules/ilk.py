@@ -17,7 +17,15 @@ def get_stats_for_ilk(ilk, days_ago=None):
         "debt", "collateral", "collateralization"
     )
     if len(vaults_data) == 0:
-        return
+        return {
+            "total_debt": 0,
+            "total_locked": 0,
+            "vaults_count": 0,
+            "weighted_collateralization_ratio": 0,
+            "change": {},
+            "capital_at_risk": 0,
+            "risk_premium": 0,
+        }
 
     aggregate_data = Vault.objects.filter(ilk=ilk, is_active=True).aggregate(
         total_debt=Sum("debt"), total_locked=Sum("collateral")
