@@ -7,16 +7,17 @@ from . import aave, compound
 
 
 def get_d3m_stats():
-    d3m = D3M.objects.latest()
+    aave_d3m = D3M.objects.filter(protocol="aave").latest()
+    comp_d3m = D3M.objects.filter(protocol="compound").latest()
 
     surplus_buffer = SurplusBuffer.objects.latest().amount
-    total_balace = d3m.balance
+    total_balace = aave_d3m.balance + comp_d3m.balance
 
     data = {
         "balance": total_balace,
-        "debt_ceiling": d3m.max_debt_ceiling,
+        "debt_ceiling": aave_d3m.max_debt_ceiling + comp_d3m.balance,
         "surplus_buffer": surplus_buffer,
-        "utilization": total_balace / surplus_buffer,
+        "utilization_surplus_buffer": total_balace / surplus_buffer,
     }
     return data
 
