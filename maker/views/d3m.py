@@ -53,8 +53,8 @@ class D3MComputeView(APIView):
 
         if protocol == "compound":
             d3m = compound.D3MCompoundCompute()
-            line = Decimal("10000000")
-            bar = Decimal("0.042")
+            line = Decimal("5000000")
+            bar = Decimal("0.02")
         else:
             d3m = aave.D3MAaveCompute()
             line = d3m.d3m_model.max_debt_ceiling
