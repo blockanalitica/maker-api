@@ -32,7 +32,7 @@ def get_d3m_info():
 
 
 RESERVE_FACTOR = 0.15
-BLOCKS_PER_YEAR = 2407328
+BLOCKS_PER_YEAR = 2628000
 
 
 def from_apy_to_apr(apy, num_of_compounds):
