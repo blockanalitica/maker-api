@@ -774,7 +774,7 @@ def get_auction(ilk, auction_uid):
         "duration": auction.duration,
         "penalty_fee": auction.penalty_fee,
         "debt_liquidated": auction.debt_liquidated,
-        "penalty_fee_per": auction.penalty_fee / auction.debt_liquidated,
+        "penalty_fee_per": (auction.penalty_fee or 0) / auction.debt_liquidated,
         "coll_returned": auction.available_collateral / auction.kicked_collateral,
         "symbol": auction.symbol,
     }
