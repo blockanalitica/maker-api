@@ -770,7 +770,10 @@ def get_capital_at_risk_history_for_ilk_score(ilk, days_ago=30):
 
 
 def get_capital_at_risk_for_ilk(ilk, days_ago=1):
-    rp = RiskPremium.objects.filter(ilk=ilk).latest()
+    try:
+        rp = RiskPremium.objects.filter(ilk=ilk).latest()
+    except RiskPremium.DoesNotExist:
+        return {}
 
     data = {
         "risk_premium": rp.risk_premium,

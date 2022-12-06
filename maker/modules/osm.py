@@ -158,7 +158,10 @@ def save_medianizer_prices(symbol, medianizer_address, chain=None, from_block=0)
 
 
 def get_osm_and_medianizer(symbol):
-    osm = OSM.objects.filter(symbol=symbol).latest()
+    try:
+        osm = OSM.objects.filter(symbol=symbol).latest()
+    except OSM.DoesNotExist:
+        return {}
 
     medianizer_price = None
     medianizer_datetime = None
