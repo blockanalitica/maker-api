@@ -65,6 +65,9 @@ class IlksView(APIView):
         )
 
         for ilk in ilks:
+            if ilk["dai_debt"] == 0:
+                ilk["capital_at_risk"] = 0
+                ilk["risk_premium"] = 0
             try:
                 stats = IlkHistoricStats.objects.filter(
                     ilk=ilk["ilk"], datetime__lte=dt
