@@ -154,21 +154,30 @@ def save_stats_for_vault(ilk):
     protected_count = protected["count"] or 0
     protected_debt = protected["debt"] or 0
 
-    dt_7 = datetime.now() - timedelta(days=7)
-    dt_30 = datetime.now() - timedelta(days=30)
-    rp = RiskPremium.objects.filter(ilk=ilk).aggregate(
-        risk_premium_7d_avg=Avg("risk_premium", filter=Q(datetime__gte=dt_7)),
-        risk_premium_30d_avg=Avg("risk_premium", filter=Q(datetime__gte=dt_30)),
-        capital_at_risk_7d_avg=Avg("capital_at_risk", filter=Q(datetime__gte=dt_7)),
-        capital_at_risk_30d_avg=Avg("capital_at_risk", filter=Q(datetime__gte=dt_30)),
-    )
+    if stats["total_debt"] == 0:
+        risk_premium_7d_avg = 0
+        risk_premium_30d_avg = 0
+        capital_at_risk_7d_avg = 0
+        capital_at_risk_30d_avg = 0
+    else:
+        dt_7 = datetime.now() - timedelta(days=7)
+        dt_30 = datetime.now() - timedelta(days=30)
+        rp = RiskPremium.objects.filter(ilk=ilk).aggregate(
+            risk_premium_7d_avg=Avg("risk_premium", filter=Q(datetime__gte=dt_7)),
+            risk_premium_30d_avg=Avg("risk_premium", filter=Q(datetime__gte=dt_30)),
+            capital_at_risk_7d_avg=Avg("capital_at_risk", filter=Q(datetime__gte=dt_7)),
+            capital_at_risk_30d_avg=Avg(
+                "capital_at_risk", filter=Q(datetime__gte=dt_30)
+            ),
+        )
 
-    risk_premium_7d_avg = rp["risk_premium_7d_avg"] or 0
-    risk_premium_30d_avg = rp["risk_premium_30d_avg"] or 0
-    capital_at_risk_7d_avg = rp["capital_at_risk_7d_avg"] or 0
-    capital_at_risk_30d_avg = rp["capital_at_risk_30d_avg"] or 0
+        risk_premium_7d_avg = rp["risk_premium_7d_avg"] or 0
+        risk_premium_30d_avg = rp["risk_premium_30d_avg"] or 0
+        capital_at_risk_7d_avg = rp["capital_at_risk_7d_avg"] or 0
+        capital_at_risk_30d_avg = rp["capital_at_risk_30d_avg"] or 0
 
     dt = datetime.now()
+
     IlkHistoricStats.objects.create(
         ilk=ilk,
         datetime=dt,
