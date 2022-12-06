@@ -10,7 +10,7 @@ import pandas as pd
 from eth_utils import to_bytes
 
 from maker.constants import MCD_VAT_CONTRACT_ADDRESS, MKR_DC_IAM_CONTRACT_ADDRESS
-from maker.models import D3M
+from maker.models import D3M, SurplusBuffer
 from maker.utils.blockchain.chain import Blockchain
 
 D3M_COMP = "0x621fE4Fde2617ea8FFadE08D0FF5A862aD287EC2"
@@ -81,8 +81,24 @@ def get_d3m_short_info():
 
 
 def get_d3m_info():
-    data = get_d3m_short_info()
+    d3m_data = D3M.objects.filter(protocol="compound").latest()
+    surplus_buffer = SurplusBuffer.objects.latest().amount
     stats = get_compound_dai_market()
+    balance = get_current_balance()
+    data = {
+        "protocol": "Compound",
+        "protocol_slug": "compound",
+        "balance": balance,
+        "debt_ceiling": d3m_data.max_debt_ceiling,
+        "target_borrow_rate": d3m_data.target_borrow_rate,
+        "symbol": "DAI",
+        "title": "Compound",
+        "utilization_balance": balance / d3m_data.max_debt_ceiling,
+        "surplus_buffer": surplus_buffer,
+        "utilization_surplus_buffer": balance / surplus_buffer,
+        "supply_utilization": None,
+    }
+
     data.update(stats)
     return data
 

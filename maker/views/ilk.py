@@ -129,10 +129,11 @@ class IlkView(APIView):
             "stability_fee": ilk.stability_fee,
             "debt_ceiling": ilk.debt_ceiling,
             "dc_iam_line": ilk.dc_iam_line,
-            "utilization": ilk.dai_debt / ilk.dc_iam_line,
+            "utilization": None,
             "hole": ilk.hole,
         }
-
+        if ilk.dc_iam_line:
+            data["utilization"] = ilk.dai_debt / ilk.dc_iam_line
         return Response(data, status.HTTP_200_OK)
 
 
