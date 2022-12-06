@@ -70,8 +70,8 @@ class IlksView(APIView):
                 ilk["risk_premium"] = 0
             try:
                 stats = IlkHistoricStats.objects.filter(
-                    ilk=ilk["ilk"], datetime__lte=dt
-                ).latest()
+                    ilk=ilk["ilk"], datetime__gte=dt
+                ).earliest()
             except IlkHistoricStats.DoesNotExist:
                 stats = None
 
