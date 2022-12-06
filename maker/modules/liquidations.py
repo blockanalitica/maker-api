@@ -8,6 +8,7 @@ from decimal import Decimal
 
 import requests
 from dateutil import parser
+from django.db.models import Q
 
 from maker.models import Liquidation, VaultsLiquidation, VaultsLiquidationHistory
 
@@ -17,9 +18,11 @@ def save_maker_liquidations(backpopulate=False):
     data = response.json()
 
     latest_liquidation = (
-        Liquidation.objects.filter(protocol="maker", finished=False)
+        Liquidation.objects.filter(
+            Q(finished=False) | Q(finished=None), protocol="maker"
+        )
         .order_by("block_number")
-        .last()
+        .first()
     )
     latest_block_number = 0
     if not latest_liquidation:
