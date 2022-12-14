@@ -57,7 +57,12 @@ VAULT_ASSET_TO_VAULT_TYPE_MAPPER = {
     "UNI": ["UNI-A"],
     "WBTC": ["WBTC-A", "RENBTC-A", "WBTC-B", "WBTC-C"],
     "stETH": ["WSTETH-A", "ETH-A", "ETH-B", "ETH-C", "WSTETH-B"],
-    "RETH": ["RETH-A"],
+    "RETH": [
+        "RETH-A",
+        "ETH-A",
+        "ETH-B",
+        "ETH-C",
+    ],
 }
 
 DEFAULT_SCENARIO_PARAMS = {
@@ -785,7 +790,9 @@ def get_capital_at_risk_for_ilk(ilk, days_ago=1):
 
     if days_ago:
         start_date = datetime.now() - timedelta(days=days_ago)
-        old_rp = RiskPremium.objects.filter(ilk=ilk, datetime__lte=start_date).latest()
+        old_rp = RiskPremium.objects.filter(
+            ilk=ilk, datetime__gte=start_date
+        ).earliest()
         changes = {
             "risk_premium": old_rp.risk_premium,
             "capital_at_risk": old_rp.capital_at_risk,

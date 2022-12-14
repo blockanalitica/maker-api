@@ -312,7 +312,6 @@ def sync_d3m_task():
 def check_to_sync_vaults():
     block_number = get_last_block_for_vaults()
     if not block_number:
-        log.error("Could not fetch latest block from Snowflake")
         return
     if Vault.objects.filter(block_number=block_number).count() > 0:
         log.info("Skiping sync_vaults for block_number %s", block_number)
