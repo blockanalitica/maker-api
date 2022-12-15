@@ -26,11 +26,8 @@ ILKS = {
     "WETH": ["ETH-A", "ETH-B", "ETH-C"],
     "WBTC": ["WBTC-A", "WBTC-B", "WBTC-C"],
     "stETH": ["WSTETH-A"],
-    "MANA": ["MANA-A"],
     "LINK": ["LINK-A"],
     "MATIC": ["MATIC-A"],
-    "RENBTC": ["RENBTC-A"],
-    "UNI": ["UNI-A"],
     "YFI": ["YFI-A"],
 }
 
@@ -38,11 +35,8 @@ ADDRESSES = {
     "WETH": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
     "WBTC": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
     "stETH": "0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
-    "MANA": "0x0f5d2fb29fb7d3cfee444a200298f468908cc942",
     "LINK": "0x514910771af9ca656af840dff83e8264ecf986ca",
     "MATIC": "0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0",
-    "RENBTC": "0xeb4c2781e4eba804ce9a9803c67d0893436bb27d",
-    "UNI": "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
     "YFI": "0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e",
 }
 
@@ -109,7 +103,7 @@ def _get_collateral(chain=None):
         asset_address = key.split("::")[1]
         symbol = symbols.get(asset_address)
         decimals = 18
-        if symbol in ["WBTC", "RENBTC"]:
+        if symbol == "WBTC":
             decimals = 8
         result[symbol] += Decimal(value / 10**decimals)
     return result
@@ -170,8 +164,6 @@ def save_assets_systemic_risk():
     )
     for symbol, _ in assets["debt"].items():
         price_symbol = symbol
-        if symbol == "RENBTC":
-            price_symbol = "WBTC"
         price = Asset.objects.get(symbol=price_symbol).price
         MakerAssetDebtCollateral.objects.create(
             asset=asset,

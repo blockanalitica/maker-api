@@ -201,8 +201,6 @@ def get_slippage_from_asset(asset, source, for_date=None, extra_key=None):
 
 
 def get_slippage_to_dai(symbol, usd_amount):
-    if symbol == "RENBTC":
-        symbol = "renBTC"
     if symbol == "ETH":
         symbol = "WETH"
     if symbol == "WSTETH":
