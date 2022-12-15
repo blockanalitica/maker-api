@@ -6,7 +6,7 @@ from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
 
-import requests
+from web3 import Web3
 
 from maker.models import (
     Asset,
@@ -47,9 +47,31 @@ ADDRESSES = {
 }
 
 
-def _get_asset_contracts():
-    response = requests.get("https://chainlog.makerdao.com/api/mainnet/active.json")
-    content = response.json()
+def _get_mkr_contracts(chain=None):
+    w3 = Blockchain(_web3=chain)
+    contract = w3.get_contract("0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F")
+
+    cnt = contract.caller.count()
+    calls = []
+    for idx in range(cnt):
+        calls.append(
+            (
+                "0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F",
+                ["get(uint256)((bytes32,address))", idx],
+                [idx, None],
+            )
+        )
+    data = w3.call_multicall(calls)
+
+    contracts = {}
+    for _, value in data.items():
+        key = Web3.toText(value[0].strip(bytes(1)))
+        contracts[key] = value[1]
+    return contracts
+
+
+def _get_asset_contracts(chain=None):
+    contracts = _get_mkr_contracts(chain)
     addresses = []
     symbols = {}
     for symbol, ilks in ILKS.items():
@@ -58,18 +80,18 @@ def _get_asset_contracts():
             s = "ETH"
         if symbol == "stETH":
             s = "WSTETH"
-        underlying_address = content.get(s)
+        underlying_address = contracts.get(s)
         symbols[underlying_address.lower()] = symbol
         for ilk in ilks:
             key = ilk.replace("-", "_")
-            token_address = content.get(f"MCD_JOIN_{key}")
+            token_address = contracts.get(f"MCD_JOIN_{key}")
             addresses.append((underlying_address.lower(), token_address.lower()))
     return addresses, symbols
 
 
 def _get_collateral(chain=None):
     w3 = Blockchain(_web3=chain)
-    wallets, symbols = _get_asset_contracts()
+    wallets, symbols = _get_asset_contracts(w3)
     calls = []
     for underlying_address, token_address in wallets:
         calls.append(

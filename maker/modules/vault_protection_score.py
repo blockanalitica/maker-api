@@ -131,8 +131,8 @@ def get_protection_score_data():
         as osm_price_close
     from
         maker_osm
-    where
-        to_timestamp(timestamp) >= current_date - 30
+    where to_timestamp(timestamp) >= current_date - 30
+        and current_price > 0
     order by 2 asc),
     daily_asset_return as (
     select
