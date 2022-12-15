@@ -691,13 +691,14 @@ def sync_dai_supply_growth_periodical():
 
     to_insert = []
     for row in data:
+        demand_growth = row[6] or 0
         dai_supply_weight = row[4] / total_dai_supply_period[row[0]]
-        organic_debt_weighted_demand_growth_perc = row[6] * dai_supply_weight
+        organic_debt_weighted_demand_growth_perc = demand_growth * dai_supply_weight
         to_insert.append(
             PeriodicalDaiSupplyGrowth(
                 time_period=row[0],
                 ilk=row[1],
-                demand_growth=row[6],
+                demand_growth=demand_growth,
                 debt_weighted_demand_growth_perc=organic_debt_weighted_demand_growth_perc,
             )
         )
