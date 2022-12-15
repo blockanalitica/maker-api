@@ -507,8 +507,6 @@ class AssetsSlippagesView(APIView):
             .order_by("symbol")
         )
 
-        symbols.remove("RENBTC")
-        symbols.append("renBTC")
         symbols.remove("WSTETH")
         symbols.append("stETH")
 

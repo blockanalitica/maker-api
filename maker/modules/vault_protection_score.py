@@ -15,15 +15,12 @@ VAULT_TYPE_TO_VAULT_ASSET_MAPPER = {
     "ETH-A": "ETH",
     "ETH-B": "ETH",
     "ETH-C": "ETH",
-    "MANA-A": "MANA",
     "MATIC-A": "MATIC",
     "LINK-A": "LINK",
     "YFI-A": "YFI",
-    "UNI-A": "UNI",
     "WBTC-A": "WBTC",
     "WBTC-B": "WBTC",
     "WBTC-C": "WBTC",
-    "RENBTC-A": "WBTC",
     "WSTETH-A": "STETH",
     "WSTETH-B": "STETH",
     "RETH-A": "RETH",
@@ -31,11 +28,6 @@ VAULT_TYPE_TO_VAULT_ASSET_MAPPER = {
 
 UNI_LP_VAULT_ASSET_MAP = {
     "UNIV2USDCETH-A": ["USDC", "ETH"],
-    "UNIV2WBTCETH-A": ["WBTC", "ETH"],
-    "UNIV2DAIETH-A": ["DAI", "ETH"],
-    "UNIV2UNIETH-A": ["UNI", "ETH"],
-    "UNIV2LINKETH-A": ["LINK", "ETH"],
-    "UNIV2WBTCDAI-A": ["WBTC", "DAI"],
     "CRVV1ETHSTETH-A": ["STETH", "ETH"],
 }
 

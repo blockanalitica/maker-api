@@ -34,15 +34,12 @@ VAULT_TYPE_TO_VAULT_ASSET_MAPPER = {
     "ETH-A": "WETH",
     "ETH-B": "WETH",
     "ETH-C": "WETH",
-    "MANA-A": "MANA",
     "MATIC-A": "MATIC",
     "LINK-A": "LINK",
     "YFI-A": "YFI",
-    "UNI-A": "UNI",
     "WBTC-A": "WBTC",
     "WBTC-B": "WBTC",
     "WBTC-C": "WBTC",
-    "RENBTC-A": "WBTC",
     "WSTETH-A": "stETH",
     "WSTETH-B": "stETH",
     "RETH-A": "RETH",
@@ -50,12 +47,10 @@ VAULT_TYPE_TO_VAULT_ASSET_MAPPER = {
 
 VAULT_ASSET_TO_VAULT_TYPE_MAPPER = {
     "WETH": ["ETH-A", "ETH-B", "ETH-C"],
-    "MANA": ["MANA-A"],
     "MATIC": ["MATIC-A"],
     "LINK": ["LINK-A"],
     "YFI": ["YFI-A"],
-    "UNI": ["UNI-A"],
-    "WBTC": ["WBTC-A", "RENBTC-A", "WBTC-B", "WBTC-C"],
+    "WBTC": ["WBTC-A", "WBTC-B", "WBTC-C"],
     "stETH": ["WSTETH-A", "ETH-A", "ETH-B", "ETH-C", "WSTETH-B"],
     "RETH": [
         "RETH-A",
@@ -101,22 +96,7 @@ DEFAULT_SCENARIO_PARAMS = {
         "jump_frequency": 2,
         "keeper_profit": 0.05,
     },
-    "MANA-A": {
-        "jump_severity": -0.6,
-        "jump_frequency": 2,
-        "keeper_profit": 0.05,
-    },
     "MATIC-A": {
-        "jump_severity": -0.6,
-        "jump_frequency": 2,
-        "keeper_profit": 0.05,
-    },
-    "RENBTC-A": {
-        "jump_severity": -0.6,
-        "jump_frequency": 2,
-        "keeper_profit": 0.05,
-    },
-    "UNI-A": {
         "jump_severity": -0.6,
         "jump_frequency": 2,
         "keeper_profit": 0.05,
