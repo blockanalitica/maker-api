@@ -10,21 +10,16 @@ from maker.models import LiquidityScore, SlippageDaily, Vault
 
 LIQUIDITY_ASSET_TO_VAULT_INFO_MAP = {
     "WETH": ["ETH-A", "ETH-B", "ETH-C"],
-    "MANA": ["MANA-A"],
     "MATIC": ["MATIC-A"],
     "LINK": ["LINK-A"],
     "YFI": ["YFI-A"],
-    "UNI": ["UNI-A"],
     "WBTC": ["WBTC-A", "WBTC-B", "WBTC-C"],
-    "RENBTC": ["RENBTC-A"],
     "WSTETH": ["WSTETH-A", "WSTETH-B"],
 }
 
 
 def _get_slippage(for_date, symbol, debt_exposure):
-    if symbol == "RENBTC":
-        symbol = "renBTC"
-    elif symbol == "WSTETH":
+    if symbol == "WSTETH":
         symbol = "stETH"
 
     slippage = (
