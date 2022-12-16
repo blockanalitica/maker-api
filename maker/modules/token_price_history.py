@@ -415,7 +415,8 @@ def get_token_aggregators(underlying_address, phase, chain=None):
 
 
 def save_market_prices():
-    symbols = Asset.objects.all().values_list("symbol", flat=True)
+    # RETH is a different token on chainlink, so don't store it
+    symbols = Asset.objects.exclude(symbol="RETH").values_list("symbol", flat=True)
     prices = get_prices(list(symbols))
     dt = datetime.now()
     for symbol, value in prices.items():

@@ -54,14 +54,17 @@ class AssetPricesView(APIView):
         data = {}
 
         days_ago = int(request.GET.get("days_ago"))
-        mkt_price = (
-            TokenPriceHistory.objects.filter(underlying_address=asset.address)
-            .latest()
-            .price
-        )
+        try:
+            mkt_price = (
+                TokenPriceHistory.objects.filter(underlying_address=asset.address)
+                .latest()
+                .price
+            )
+        except TokenPriceHistory.DoesNotExist:
+            mkt_price = None
+
         try:
             medianizer_price = Medianizer.objects.filter(symbol=symbol).latest().price
-            data["medianizer_price"] = medianizer_price
         except Medianizer.DoesNotExist:
             medianizer_price = None
         try:
@@ -70,15 +73,24 @@ class AssetPricesView(APIView):
             data["osm_next_price"] = osm.next_price
         except OSM.DoesNotExist:
             osm = None
+
+        mkt_price_diff = None
         if days_ago:
             timestamp = (datetime.now() - timedelta(days=int(days_ago))).timestamp()
-            mkt_before_price = (
-                TokenPriceHistory.objects.filter(
-                    underlying_address=asset.address, timestamp__lte=timestamp
+
+            try:
+                mkt_before_price = (
+                    TokenPriceHistory.objects.filter(
+                        underlying_address=asset.address, timestamp__lte=timestamp
+                    )
+                    .latest()
+                    .price
                 )
-                .latest()
-                .price
-            )
+            except TokenPriceHistory.DoesNotExist:
+                pass
+            else:
+                mkt_price_diff = (mkt_price - mkt_before_price) / mkt_before_price * 100
+
             if medianizer_price:
                 medianizer_before_price = (
                     Medianizer.objects.filter(symbol=symbol, timestamp__lte=timestamp)
@@ -102,10 +114,10 @@ class AssetPricesView(APIView):
                     * 100
                 )
                 data["osm_price_diff"] = osm_price_diff
-            mkt_price_diff = (mkt_price - mkt_before_price) / mkt_before_price * 100
+
         data["mkt_price"] = mkt_price
         data["mkt_price_diff"] = mkt_price_diff
-
+        data["medianizer_price"] = medianizer_price
         return Response(data, status.HTTP_200_OK)
 
 
