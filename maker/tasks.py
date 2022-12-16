@@ -324,8 +324,10 @@ def check_to_sync_vaults():
 def sync_vaults_task():
     save_events()
     sync_vault_event_states()
-    for ilk in Ilk.objects.with_vaults().values_list("ilk", flat=True):
-        sync_ilk_vaults_task.delay(ilk)
+    for idx, ilk in enumerate(Ilk.objects.with_vaults().values_list("ilk", flat=True)):
+        # Delay tasks a bit as snowflake can't handle that many requests at once
+        sync_ilk_vaults_task.apply_async(args=(ilk,), countdown=idx)
+
     claculate_and_save_psm_dai_supply_task.delay()
 
 
