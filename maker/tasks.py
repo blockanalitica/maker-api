@@ -110,11 +110,11 @@ SCHEDULE = {
     "save_asset_market_caps_task": {
         "schedule": crontab(minute="*/30"),
     },
-    "get_slippage_for_slippage_pairs": {
-        # Run every 30 minutes, but not at random times, so we can time other
-        # tasks with new slippages that need it
-        "schedule": crontab(minute="15,45"),
-    },
+    # "get_slippage_for_slippage_pairs": {
+    #     # Run every 30 minutes, but not at random times, so we can time other
+    #     # tasks with new slippages that need it
+    #     "schedule": crontab(minute="15,45"),
+    # },
     "send_vaults_at_risk_alert_task": {
         "schedule": crontab(minute="5-21/1"),
     },
@@ -176,9 +176,9 @@ SCHEDULE = {
         # First day of the month
         "schedule": crontab(minute="0", hour="0", day_of_month="1"),
     },
-    "set_active_slippages": {
-        "schedule": crontab(minute="5", hour="0"),
-    },
+    # "set_active_slippages": {
+    #     "schedule": crontab(minute="5", hour="0"),
+    # },
 }
 
 ##############
