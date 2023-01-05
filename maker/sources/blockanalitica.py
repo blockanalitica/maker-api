@@ -3,28 +3,32 @@
 # SPDX-License-Identifier: Apache-2.0
 import logging
 
-import requests
 from django.conf import settings
 
+from maker.utils.http import requests_retry_session, retry_get_json
+
 log = logging.getLogger(__name__)
+
+SESSIONS = {"papi": requests_retry_session(), "datalake": requests_retry_session()}
 
 
 def _papi_get(url, **kwargs):
     log.debug("Fetching from Papi %s", url, **kwargs)
-    response = requests.get(
-        "{}/{}".format(settings.BLOCKANALITICA_PAPI_URL, url.lstrip("/")), **kwargs
+    data = retry_get_json(
+        "{}/{}".format(settings.BLOCKANALITICA_PAPI_URL, url.lstrip("/")),
+        session=SESSIONS["papi"],
+        **kwargs,
     )
-    response.raise_for_status()
-    return response.json()
+    return data
 
 
 def _datalake_get(url, **kwargs):
-    log.debug("Fetching from Datalake %s", url, **kwargs)
-    response = requests.get(
-        "{}/{}".format(settings.BLOCKANALITICA_DATALAKE_URL, url.lstrip("/")), **kwargs
+    data = retry_get_json(
+        "{}/{}".format(settings.BLOCKANALITICA_DATALAKE_URL, url.lstrip("/")),
+        session=SESSIONS["datalake"],
+        **kwargs,
     )
-    response.raise_for_status()
-    return response.json()
+    return data
 
 
 def fetch_aave_rates(symbol, days_ago=None):
