@@ -522,9 +522,10 @@ class AssetsSlippagesView(APIView):
         symbols.remove("WSTETH")
         symbols.append("stETH")
 
+        latest = SlippageDaily.objects.latest()
         slippages = (
             SlippageDaily.objects.filter(
-                date=date.today(),
+                date=latest.date,
                 pair__from_asset__underlying_symbol__in=symbols,
                 slippage_percent_avg__isnull=False,
             )
