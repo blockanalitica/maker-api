@@ -407,8 +407,6 @@ class DAISupplyRiskModule:
             "report_date", "vault_uid", "dai_supply"
         )
 
-        print(len(rows))
-
         total_supply = defaultdict(Decimal)
         groups = defaultdict(lambda: defaultdict(Decimal))
 
