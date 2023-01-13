@@ -32,7 +32,7 @@ def send_vaults_at_risk_alert():
 
         webhooks = (
             DiscordWebhook(
-                url=settings.DISCORD_ALERT_BOT_WEBHOOK_BA,
+                url=settings.DISCORD_AT_RISK_BOT_WEBHOOK_BA,
                 rate_limit_retry=True,
             ),
             DiscordWebhook(
