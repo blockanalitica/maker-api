@@ -14,10 +14,8 @@ def run_query(uri, query, statusCode=200):
         content = response.json()
         if not content.get("data"):
             time.sleep(5)
-            print("Error, Try again")
             return run_query(uri, query, statusCode=200)
         return response.json()
     else:
         time.sleep(5)
-        print("Error, Try again")
         return run_query(uri, query, statusCode=200)

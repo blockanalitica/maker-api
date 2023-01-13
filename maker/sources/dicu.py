@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import requests
 from django.conf import settings
 from django.core.cache import cache
 from oauthlib.oauth2 import LegacyApplicationClient
@@ -172,16 +171,16 @@ def get_barks_for_ilk(ilk):
         skip += page_size
 
 
-def register_user():
-    """Registers with MCDState's new API."""
-    url = "{}/users/register".format(DATA_API_URL)
-    data = {
-        "email": settings.MCDSTATE_API_USERNAME,
-        "password": settings.MCDSTATE_API_PASSWORD,
-    }
-    response = requests.post(url, json=data)
-    response.raise_for_status()
-    print(response.json())
+# def register_user():
+#     """Registers with MCDState's new API."""
+#     url = "{}/users/register".format(DATA_API_URL)
+#     data = {
+#         "email": settings.MCDSTATE_API_USERNAME,
+#         "password": settings.MCDSTATE_API_PASSWORD,
+#     }
+#     response = requests.post(url, json=data)
+#     response.raise_for_status()
+#     print(response.json())
 
 
 class MCDSnowflake:
