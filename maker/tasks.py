@@ -453,8 +453,12 @@ def save_osm_daily_task():
 
 @app.task
 def get_slippage_for_slippage_pairs():
-    for slippage_pair in SlippagePair.objects.filter(is_active=True):
-        save_oneinch_slippages_task.delay(slippage_pair.id)
+    pairs = SlippagePair.objects.filter(is_active=True)
+    for idx, slippage_pair in enumerate(pairs):
+        # Delay each task by 10 min
+        save_oneinch_slippages_task.apply_async(
+            (slippage_pair.id,), countdown=idx * 600
+        )
 
 
 @app.task
