@@ -843,6 +843,7 @@ class SlippagePair(TimeStampedModel):
     )
     interval = models.IntegerField()
     last_run = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         get_latest_by = "created"

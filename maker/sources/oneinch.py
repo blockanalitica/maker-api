@@ -15,4 +15,8 @@ def get_oneinch_quote(from_token_address, to_token_address, amount):
         f"fromTokenAddress={from_token_address}"
         f"&toTokenAddress={to_token_address}&amount={amount}"
     )
-    return retry_get_json(url, status_forcelist=(400, 429, 500, 502, 503, 504))
+    return retry_get_json(
+        url,
+        status_forcelist=(400, 429, 500, 502, 503, 504),
+        respect_retry_after_header=False,
+    )

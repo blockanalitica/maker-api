@@ -111,9 +111,7 @@ SCHEDULE = {
         "schedule": crontab(minute="*/30"),
     },
     # "get_slippage_for_slippage_pairs": {
-    #     # Run every 30 minutes, but not at random times, so we can time other
-    #     # tasks with new slippages that need it
-    #     "schedule": crontab(minute="15,45"),
+    #     "schedule": crontab(minute="15", hour="3,9,15,21"),
     # },
     "send_vaults_at_risk_alert_task": {
         "schedule": crontab(minute="5-21/1"),
@@ -455,17 +453,8 @@ def save_osm_daily_task():
 
 @app.task
 def get_slippage_for_slippage_pairs():
-    slippage_pairs = []
-    for slippage_pair in SlippagePair.objects.all():
-        if not slippage_pair.last_run or (
-            datetime.utcnow() - timedelta(hours=slippage_pair.interval)
-            > slippage_pair.last_run
-        ):
-            slippage_pairs.append(slippage_pair)
-    if slippage_pairs:
-        for slippage_pair in slippage_pairs:
-            save_oneinch_slippages_task.delay(slippage_pair.id)
-            # save_zerox_slippages(slippage_pair)
+    for slippage_pair in SlippagePair.objects.filter(is_active=True):
+        save_oneinch_slippages_task.delay(slippage_pair.id)
 
 
 @app.task

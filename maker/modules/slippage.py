@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: © 2022 Dai Foundation <www.daifoundation.org>
 #
 # SPDX-License-Identifier: Apache-2.0
-
 import logging
+import time
 from collections import defaultdict
 from datetime import date, datetime
 from decimal import Decimal
@@ -84,8 +84,9 @@ def save_oneinch_slippages(slippage_pair_id):
         slippage_daily.slippage_list.append(slippage)
         slippage_daily.slippage_percent_avg = mean(slippage_daily.slippage_list)
         slippage_daily.save()
-        if slippage < -90:
+        if slippage < -80:
             break
+        time.sleep(0.5)
     slippage_pair.last_run = datetime.utcnow()
     slippage_pair.save()
 
