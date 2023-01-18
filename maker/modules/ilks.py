@@ -62,6 +62,8 @@ def save_ilks():
                 symbol = "USDP"
         elif collateral["ilk"] == "DIRECT-AAVEV2-DAI":
             symbol = "AAVE"
+        elif collateral["ilk"] == "DIRECT-COMPV2-DAI":
+            symbol = "COMP"
         else:
             symbol = ilk.split("-")[0]
 

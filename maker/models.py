@@ -420,8 +420,10 @@ class D3M(TimeStampedModel):
     )
 
     balance = models.DecimalField(max_digits=32, decimal_places=18, null=True)
-
+    ilk = models.CharField(max_length=32, null=True)
     protocol = models.CharField(max_length=32)
+
+    balance_contract = models.CharField(max_length=42, null=True)
 
     class Meta:
         get_latest_by = "timestamp"
