@@ -86,7 +86,7 @@ def save_oneinch_slippages(slippage_pair_id):
         slippage_daily.save()
         if slippage < -80:
             break
-        time.sleep(0.5)
+        time.sleep(0.8)
     slippage_pair.last_run = datetime.utcnow()
     slippage_pair.save()
 
