@@ -11,13 +11,9 @@ from django.db.models.functions import TruncHour
 from eth_utils import to_checksum_address
 from web3 import Web3
 
-from maker.constants import AAVE_D3M_CONTRACT_ADDRESS
 from maker.models import D3M, SurplusBuffer
 from maker.modules.block import get_or_save_block
-from maker.sources.blockanalitica import (
-    fetch_aave_d3m_dai_historic_rates,
-    fetch_aave_historic_rate,
-)
+from maker.sources.blockanalitica import fetch_aave_historic_rate
 from maker.utils.blockchain.chain import Blockchain
 
 from .helper import get_d3m_contract_data
