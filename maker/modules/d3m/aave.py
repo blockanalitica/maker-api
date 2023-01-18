@@ -14,18 +14,22 @@ from web3 import Web3
 from maker.constants import AAVE_D3M_CONTRACT_ADDRESS
 from maker.models import D3M, SurplusBuffer
 from maker.modules.block import get_or_save_block
-from maker.sources.blockanalitica import fetch_aave_d3m_dai_historic_rates
+from maker.sources.blockanalitica import (
+    fetch_aave_d3m_dai_historic_rates,
+    fetch_aave_historic_rate,
+)
 from maker.utils.blockchain.chain import Blockchain
 
 from .helper import get_d3m_contract_data
 
 
 def get_target_rate_history():
+    """DEPRECATED"""
     chain = Blockchain()
     filters = {
         "fromBlock": 14054075,
         "toBlock": "latest",
-        "address": to_checksum_address(AAVE_D3M_CONTRACT_ADDRESS),
+        "address": to_checksum_address("0x12F36cdEA3A28C35aC8C6Cc71D9265c17C74A27F"),
         "topics": [
             "0xe986e40cc8c151830d4f61050f4fb2e4add8567caad2d5f5496f9158e91fe4c7"
         ],
@@ -85,7 +89,8 @@ def get_d3m_short_info():
 
 
 def get_d3m_info():
-    d3m_data = D3M.objects.filter(protocol="aave").latest()
+    ilk = "DIRECT-AAVEV2-DAI"
+    d3m_data = D3M.objects.filter(ilk=ilk).latest()
     surplus_buffer = SurplusBuffer.objects.latest().amount
     stats = get_dai_market()
     balance = get_current_balance(d3m_data.balance_contract)
@@ -163,16 +168,17 @@ def get_dai_market():
 
 
 def get_historic_rates(days_ago=30):
+    ilk = "DIRECT-AAVEV2-DAI"
     dt = datetime.now() - timedelta(days=days_ago)
     target_borrow_rates = (
-        D3M.objects.filter(protocol="aave", datetime__gte=dt)
+        D3M.objects.filter(ilk=ilk, datetime__gte=dt)
         .annotate(dt=TruncHour("datetime"))
         .values("target_borrow_rate", "dt")
     )
-    historic_rates = fetch_aave_d3m_dai_historic_rates(days_ago)
+    historic_rates = fetch_aave_historic_rate("DAI", days_ago)
 
     return {
-        "aave_borrow_rates": historic_rates,
+        "borrow_rates": historic_rates,
         "target_borrow_rates": target_borrow_rates,
     }
 

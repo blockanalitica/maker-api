@@ -59,7 +59,8 @@ def get_d3m_short_info():
 
 
 def get_d3m_info():
-    d3m_data = D3M.objects.filter(protocol="compound").latest()
+    ilk = "DIRECT-COMPV2-DAI"
+    d3m_data = D3M.objects.filter(ilk=ilk).latest()
     surplus_buffer = SurplusBuffer.objects.latest().amount
     stats = get_compound_dai_market()
     balance = get_current_balance(d3m_data.balance_contract)

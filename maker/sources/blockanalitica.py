@@ -71,3 +71,11 @@ def fetch_ilk_vaults(ilk):
 
         for vault in data["results"]:
             yield vault
+
+
+def fetch_aave_historic_rate(symbol, days_ago):
+    return _datalake_get(
+        "/aave/v2/ethereum/markets/{}/historic-details/?days_ago={}".format(
+            symbol, days_ago
+        )
+    )
