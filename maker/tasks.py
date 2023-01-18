@@ -235,11 +235,6 @@ def sync_ilk_params_task():
 
 
 @app.task
-def save_oneinch_slippages_task(slippage_pair_id):
-    save_oneinch_slippages(slippage_pair_id)
-
-
-@app.task
 def sync_history_for_ohlcv_pair_task(pair_id):
     pair = OHLCVPair.objects.get(id=pair_id)
     sync_history_for_ohlcv_pair(pair)
@@ -451,14 +446,16 @@ def save_osm_daily_task():
     save_osm_daily()
 
 
-@app.task
+@app.task(time_limit=45 * 60)
 def get_slippage_for_slippage_pairs():
     pairs = SlippagePair.objects.filter(is_active=True)
-    for idx, slippage_pair in enumerate(pairs):
-        # Delay each task by 10 min
-        save_oneinch_slippages_task.apply_async(
-            (slippage_pair.id,), countdown=idx * 600
-        )
+    for slippage_pair in pairs:
+        try:
+            save_oneinch_slippages(slippage_pair.id)
+        except:  # noqa
+            # We're catching all and any exceptions so if one pair fails updating,
+            # we keep synching other pairs
+            log.exception("Error getting slippage for pair %s", slippage_pair.id)
 
 
 @app.task

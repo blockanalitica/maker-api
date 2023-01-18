@@ -46,6 +46,8 @@ def save_oneinch_slippages(slippage_pair_id):
     to_asset_address = to_asset.address
     to_asset_mantissa = Decimal(str(10**to_asset.decimals))
     usd_amounts = _generate_usd_amounts()
+
+    retry_errors = 0
     for usd_amount in usd_amounts:
         log.debug(
             f"Creating slippage slippage for: "
@@ -59,6 +61,7 @@ def save_oneinch_slippages(slippage_pair_id):
                 from_asset.address, to_asset_address, asset_amount
             )
         except RetryError:
+            retry_errors += 1
             log.exception(
                 "RetryError get_quote_data(%s, %s, %s), usd_amount: %s",
                 slippage_pair.from_asset.symbol,
@@ -66,7 +69,17 @@ def save_oneinch_slippages(slippage_pair_id):
                 asset_amount,
                 usd_amount,
             )
+            if retry_errors > 5:
+                log.exception(
+                    "Got 5 retry errors in a row. Stopped updating slippage pair %s",
+                    slippage_pair_id,
+                )
+                break
             continue
+
+        # Reset number of errors
+        retry_errors = 0
+
         slippage = (
             Decimal(quote["toTokenAmount"]) / to_asset_mantissa * 100
         ) / usd_amount - 100
@@ -86,7 +99,7 @@ def save_oneinch_slippages(slippage_pair_id):
         slippage_daily.save()
         if slippage < -80:
             break
-        time.sleep(0.8)
+        time.sleep(0.5)
     slippage_pair.last_run = datetime.utcnow()
     slippage_pair.save()
 
