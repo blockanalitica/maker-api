@@ -46,7 +46,7 @@ class D3MHistoricRatesView(APIView):
         if protocol == "aave":
             data = aave.get_historic_rates(days_ago)
         else:
-            data = []
+            data = compound.get_historic_rates(days_ago)
         return Response(data, status.HTTP_200_OK)
 
 

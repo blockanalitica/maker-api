@@ -2,19 +2,26 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 import numpy as np
 import pandas as pd
+from django.db.models.functions import TruncHour
 from eth_utils import to_checksum_address
 
 from maker.models import D3M, SurplusBuffer
+from maker.sources.blockanalitica import fetch_compound_historic_rate
 from maker.utils.blockchain.chain import Blockchain
 
 from .helper import get_d3m_contract_data
 
 D3M_COMP = "0x621fE4Fde2617ea8FFadE08D0FF5A862aD287EC2"
+
+
+RESERVE_FACTOR = 0.15
+BLOCKS_PER_YEAR = 2628000
+ILK = "DIRECT-COMPV2-DAI"
 
 
 def get_current_balance(balance_contract):
@@ -82,8 +89,20 @@ def get_d3m_info():
     return data
 
 
-RESERVE_FACTOR = 0.15
-BLOCKS_PER_YEAR = 2628000
+def get_historic_rates(days_ago=30):
+    ilk = ILK
+    dt = datetime.now() - timedelta(days=days_ago)
+    target_borrow_rates = (
+        D3M.objects.filter(ilk=ilk, datetime__gte=dt)
+        .annotate(dt=TruncHour("datetime"))
+        .values("target_borrow_rate", "dt")
+    )
+    historic_rates = fetch_compound_historic_rate("DAI", days_ago)
+
+    return {
+        "borrow_rates": historic_rates,
+        "target_borrow_rates": target_borrow_rates,
+    }
 
 
 def get_compound_dai_market():
