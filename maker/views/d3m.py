@@ -43,7 +43,10 @@ class D3MHistoricRatesView(APIView):
 
     def get(self, request, protocol):
         days_ago = int(request.GET.get("days_ago", 30))
-        data = aave.get_historic_rates(days_ago)
+        if protocol == "aave":
+            data = aave.get_historic_rates(days_ago)
+        else:
+            data = compound.get_historic_rates(days_ago)
         return Response(data, status.HTTP_200_OK)
 
 

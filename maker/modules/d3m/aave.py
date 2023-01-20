@@ -8,52 +8,24 @@ from decimal import Decimal
 import numpy as np
 import pandas as pd
 from django.db.models.functions import TruncHour
-from eth_utils import to_bytes, to_checksum_address
+from eth_utils import to_checksum_address
 from web3 import Web3
 
-from maker.constants import (
-    AAVE_D3M_CONTRACT_ADDRESS,
-    MCD_VAT_CONTRACT_ADDRESS,
-    MKR_DC_IAM_CONTRACT_ADDRESS,
-)
 from maker.models import D3M, SurplusBuffer
 from maker.modules.block import get_or_save_block
-from maker.sources.blockanalitica import (
-    fetch_aave_d3m_dai_historic_rates,
-    fetch_aave_d3m_dai_stats,
-)
+from maker.sources.blockanalitica import fetch_aave_historic_rate
 from maker.utils.blockchain.chain import Blockchain
 
-
-def get_d3m_contract_data():
-    chain = Blockchain()
-
-    # Debt ceiling
-    vat_contract = chain.get_contract(MCD_VAT_CONTRACT_ADDRESS)
-    data = vat_contract.caller.ilks(to_bytes(text="DIRECT-AAVEV2-DAI"))
-    debt_ceiling = Decimal(data[3]) / 10**45
-
-    dc_iam_contract = chain.get_contract(MKR_DC_IAM_CONTRACT_ADDRESS)
-    data = dc_iam_contract.caller.ilks(to_bytes(text="DIRECT-AAVEV2-DAI"))
-    max_debt_ceiling = Decimal(data[0]) / 10**45  # line
-
-    d3m_contract = chain.get_contract(AAVE_D3M_CONTRACT_ADDRESS)
-    target_borrow_rate = chain.convert_ray(d3m_contract.caller.bar())
-
-    return {
-        "debt_ceiling": debt_ceiling,
-        "max_debt_ceiling": max_debt_ceiling,
-        "target_borrow_rate": target_borrow_rate,
-        "block_number": chain.get_latest_block(),
-    }
+from .helper import get_d3m_contract_data
 
 
 def get_target_rate_history():
+    """DEPRECATED"""
     chain = Blockchain()
     filters = {
         "fromBlock": 14054075,
         "toBlock": "latest",
-        "address": to_checksum_address(AAVE_D3M_CONTRACT_ADDRESS),
+        "address": to_checksum_address("0x12F36cdEA3A28C35aC8C6Cc71D9265c17C74A27F"),
         "topics": [
             "0xe986e40cc8c151830d4f61050f4fb2e4add8567caad2d5f5496f9158e91fe4c7"
         ],
@@ -72,23 +44,33 @@ def get_target_rate_history():
         )
 
 
-def get_current_balance():
-    stats = fetch_aave_d3m_dai_stats()
-    return Decimal(str(stats["balance"]))
+def get_current_balance(balance_contract):
+    chain = Blockchain()
+    contract = chain.get_contract(
+        "0x028171bca77440897b824ca71d1c56cac55b68a3", abi_type="erc20"
+    )
+    data = contract.caller.balanceOf(to_checksum_address(balance_contract))
+    return Decimal(data) / Decimal(1e18)
 
 
 def save_d3m():
-    data = get_d3m_contract_data()
+    ilk = "DIRECT-AAVEV2-DAI"
+    data = get_d3m_contract_data(ilk)
     dt = datetime.now()
-    balance = get_current_balance()
+    balance = get_current_balance(data["balance_contract"])
     D3M.objects.create(
-        timestamp=dt.timestamp(), datetime=dt, protocol="aave", balance=balance, **data
+        timestamp=dt.timestamp(),
+        datetime=dt,
+        protocol="aave",
+        ilk=ilk,
+        balance=balance,
+        **data,
     )
 
 
 def get_d3m_short_info():
     d3m_data = D3M.objects.filter(protocol="aave").latest()
-    balance = get_current_balance()
+    balance = get_current_balance(d3m_data.balance_contract)
 
     return {
         "protocol": "AAVE",
@@ -103,10 +85,11 @@ def get_d3m_short_info():
 
 
 def get_d3m_info():
-    d3m_data = D3M.objects.filter(protocol="aave").latest()
+    ilk = "DIRECT-AAVEV2-DAI"
+    d3m_data = D3M.objects.filter(ilk=ilk).latest()
     surplus_buffer = SurplusBuffer.objects.latest().amount
-    stats = fetch_aave_d3m_dai_stats()
-    balance = Decimal(str(stats["balance"]))
+    stats = get_dai_market()
+    balance = get_current_balance(d3m_data.balance_contract)
     data = {
         "protocol": "AAVE",
         "protocol_slug": "aave",
@@ -118,24 +101,80 @@ def get_d3m_info():
         "utilization_balance": balance / d3m_data.max_debt_ceiling,
         "surplus_buffer": surplus_buffer,
         "utilization_surplus_buffer": balance / surplus_buffer,
-        "supply_utilization": stats["balance"] / stats["real_supply"],
+        "supply_utilization": None,
     }
 
     data.update(stats)
     return data
 
 
+def get_dai_market():
+    data_provider_address = "0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d"
+    underlying_address = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+    token_calls = []
+    token_calls.append(
+        (
+            data_provider_address,
+            [
+                "getReserveData(address)((uint256,uint256,uint256,uint256"
+                ",uint256,uint256,uint256,uint256,uint256,uint40))",
+                underlying_address,
+            ],
+            ["getReserveData", None],
+        )
+    )
+    token_calls.append(
+        (
+            data_provider_address,
+            [
+                (
+                    "getReserveConfigurationData(address)((uint256,uint256,uint256,uint256"
+                    ",uint256,bool,bool,bool,bool,bool))"
+                ),
+                underlying_address,
+            ],
+            ["getReserveConfigurationData", None],
+        )
+    )
+    token_calls.append(
+        (
+            data_provider_address,
+            [
+                ("getReserveTokensAddresses(address)((address,address,address))"),
+                underlying_address,
+            ],
+            ["getReserveTokensAddresses", None],
+        )
+    )
+
+    w3 = Blockchain()
+    data = w3.call_multicall(token_calls)
+    item = data["getReserveData"]
+    conf_data = data["getReserveConfigurationData"]
+    decimals = conf_data[0]
+    data["total_supply"] = (item[0] + (item[1] + item[2])) / 10**decimals
+    data["total_borrow"] = (item[1] + item[2]) / 10**decimals
+    data["supply_rate"] = item[3] / Decimal(10**27)
+    data["borrow_rate"] = item[4] / Decimal(10**27)
+    data["borrow_stable_rate"] = item[5] / Decimal(10**27)
+    data["variable_debt"] = item[2] / 10**decimals
+    data["stable_debt"] = item[1] / 10**decimals
+    data["utilization"] = data["total_borrow"] / data["total_supply"]
+    return data
+
+
 def get_historic_rates(days_ago=30):
+    ilk = "DIRECT-AAVEV2-DAI"
     dt = datetime.now() - timedelta(days=days_ago)
     target_borrow_rates = (
-        D3M.objects.filter(protocol="aave", datetime__gte=dt)
+        D3M.objects.filter(ilk=ilk, datetime__gte=dt)
         .annotate(dt=TruncHour("datetime"))
         .values("target_borrow_rate", "dt")
     )
-    historic_rates = fetch_aave_d3m_dai_historic_rates(days_ago)
+    historic_rates = fetch_aave_historic_rate("DAI", days_ago)
 
     return {
-        "aave_borrow_rates": historic_rates,
+        "borrow_rates": historic_rates,
         "target_borrow_rates": target_borrow_rates,
     }
 
@@ -162,7 +201,7 @@ class D3MAaveCompute:
 
     def get_rates(self):
         if not self._rates:
-            rate = fetch_aave_d3m_dai_stats()
+            rate = get_dai_market()
             self._rates = {
                 "borrow_rate": Decimal(str(rate["borrow_rate"])),
                 "total_supply": Decimal(str(rate["total_supply"])),

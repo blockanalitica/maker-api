@@ -2,71 +2,56 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 import numpy as np
 import pandas as pd
-from eth_utils import to_bytes
+from django.db.models.functions import TruncHour
+from eth_utils import to_checksum_address
 
-from maker.constants import MCD_VAT_CONTRACT_ADDRESS, MKR_DC_IAM_CONTRACT_ADDRESS
 from maker.models import D3M, SurplusBuffer
+from maker.sources.blockanalitica import fetch_compound_historic_rate
 from maker.utils.blockchain.chain import Blockchain
+
+from .helper import get_d3m_contract_data
 
 D3M_COMP = "0x621fE4Fde2617ea8FFadE08D0FF5A862aD287EC2"
 
 
-def get_d3m_contract_data():
+RESERVE_FACTOR = 0.15
+BLOCKS_PER_YEAR = 2628000
+ILK = "DIRECT-COMPV2-DAI"
+
+
+def get_current_balance(balance_contract):
     chain = Blockchain()
-
-    # Debt ceiling
-    vat_contract = chain.get_contract(MCD_VAT_CONTRACT_ADDRESS)
-    data = vat_contract.caller.ilks(to_bytes(text="DIRECT-COMPV2-DAI"))
-    debt_ceiling = Decimal(data[3]) / 10**45
-
-    dc_iam_contract = chain.get_contract(MKR_DC_IAM_CONTRACT_ADDRESS)
-    data = dc_iam_contract.caller.ilks(to_bytes(text="DIRECT-COMPV2-DAI"))
-    max_debt_ceiling = Decimal(data[0]) / 10**45  # line
-
-    # d3m_contract = chain.get_contract(AAVE_D3M_CONTRACT_ADDRESS)
-    # target_borrow_rate = chain.convert_ray(d3m_contract.caller.bar())
-
-    return {
-        "debt_ceiling": debt_ceiling,
-        "max_debt_ceiling": max_debt_ceiling,
-        "target_borrow_rate": "0.02",
-        "block_number": chain.get_latest_block(),
-    }
-
-
-def get_current_balance():
-    chain = Blockchain()
-
     contract = chain.get_contract(
         "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643", abi_type="ceth"
     )
-    data = contract.caller.balanceOf(D3M_COMP)
-
+    data = contract.caller.balanceOf(to_checksum_address(balance_contract))
     exchange_rate = contract.caller.exchangeRateStored()
     return (Decimal(data) / Decimal(1e8)) * (Decimal(exchange_rate) / Decimal(1e28))
 
 
 def save_d3m():
-    data = get_d3m_contract_data()
+    ilk = "DIRECT-COMPV2-DAI"
+    data = get_d3m_contract_data(ilk)
     dt = datetime.now()
-    balance = get_current_balance()
+    balance = get_current_balance(data["balance_contract"])
     D3M.objects.create(
         timestamp=dt.timestamp(),
         datetime=dt,
         protocol="compound",
         balance=balance,
+        ilk=ilk,
         **data,
     )
 
 
 def get_d3m_short_info():
     d3m_data = D3M.objects.filter(protocol="compound").latest()
-    balance = get_current_balance()
+    balance = get_current_balance(d3m_data.balance_contract)
     return {
         "protocol": "Compound",
         "protocol_slug": "compound",
@@ -81,10 +66,11 @@ def get_d3m_short_info():
 
 
 def get_d3m_info():
-    d3m_data = D3M.objects.filter(protocol="compound").latest()
+    ilk = "DIRECT-COMPV2-DAI"
+    d3m_data = D3M.objects.filter(ilk=ilk).latest()
     surplus_buffer = SurplusBuffer.objects.latest().amount
     stats = get_compound_dai_market()
-    balance = get_current_balance()
+    balance = get_current_balance(d3m_data.balance_contract)
     data = {
         "protocol": "Compound",
         "protocol_slug": "compound",
@@ -96,20 +82,27 @@ def get_d3m_info():
         "utilization_balance": balance / d3m_data.max_debt_ceiling,
         "surplus_buffer": surplus_buffer,
         "utilization_surplus_buffer": balance / surplus_buffer,
-        "supply_utilization": None,
+        "supply_utilization": stats["total_borrow"] / stats["total_supply"],
     }
 
     data.update(stats)
     return data
 
 
-RESERVE_FACTOR = 0.15
-BLOCKS_PER_YEAR = 2628000
+def get_historic_rates(days_ago=30):
+    ilk = ILK
+    dt = datetime.now() - timedelta(days=days_ago)
+    target_borrow_rates = (
+        D3M.objects.filter(ilk=ilk, datetime__gte=dt)
+        .annotate(dt=TruncHour("datetime"))
+        .values("target_borrow_rate", "dt")
+    )
+    historic_rates = fetch_compound_historic_rate("DAI", days_ago)
 
-
-def from_apy_to_apr(apy, num_of_compounds):
-    apr = num_of_compounds * ((1 + apy) ** Decimal(str((1 / num_of_compounds))) - 1)
-    return apr
+    return {
+        "borrow_rates": historic_rates,
+        "target_borrow_rates": target_borrow_rates,
+    }
 
 
 def get_compound_dai_market():
@@ -170,6 +163,7 @@ def get_compound_dai_market():
     data["supply_rate"] = data["supply_rate"] * BLOCKS_PER_YEAR / 1e18
     data["borrow_rate"] = data["borrow_rate"] * BLOCKS_PER_YEAR / 1e18
     data["exchange_rate"] = data["exchange_rate"]
+    data["utilization"] = data["total_borrow"] / data["total_supply"]
     return data
 
 
