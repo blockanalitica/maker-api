@@ -1044,3 +1044,16 @@ class PSMDAISupply(TimeStampedModel):
         unique_together = ["ilk", "datetime"]
         get_latest_by = "datetime"
         ordering = ["-datetime"]
+
+
+class WalletTokenBalance(models.Model):
+    wallet_address = models.CharField(max_length=42, db_index=True)
+    amount = models.DecimalField(max_digits=32, decimal_places=18)
+    symbol = models.CharField(max_length=64)
+    price = models.DecimalField(max_digits=32, decimal_places=8)
+    usd_amount = models.DecimalField(max_digits=32, decimal_places=8)
+    datetime = models.DateTimeField()
+    chain = models.CharField(max_length=32, null=True)
+
+    class Meta:
+        get_latest_by = "datetime"
