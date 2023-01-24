@@ -12,16 +12,6 @@ log = logging.getLogger(__name__)
 SESSIONS = {"papi": requests_retry_session(), "datalake": requests_retry_session()}
 
 
-def _papi_get(url, **kwargs):
-    log.debug("Fetching from Papi %s", url, **kwargs)
-    data = retry_get_json(
-        "{}/{}".format(settings.BLOCKANALITICA_PAPI_URL, url.lstrip("/")),
-        session=SESSIONS["papi"],
-        **kwargs,
-    )
-    return data
-
-
 def _datalake_get(url, **kwargs):
     data = retry_get_json(
         "{}/{}".format(settings.BLOCKANALITICA_DATALAKE_URL, url.lstrip("/")),
@@ -29,21 +19,6 @@ def _datalake_get(url, **kwargs):
         **kwargs,
     )
     return data
-
-
-def fetch_aave_d3m_dai_stats():
-    return _papi_get("/aave/defi/d3m/dai-stats/")
-
-
-def fetch_aave_d3m_dai_historic_rates(days_ago=None):
-    params = {}
-    if days_ago:
-        params["days_ago"] = days_ago
-    return _papi_get("/aave/defi/d3m/dai-historic-rates/", params=params)
-
-
-def fetch_compound_d3m_dai_stats():
-    return _papi_get("/compound/defi/d3m/dai-stats/")
 
 
 def fetch_ilk_vaults(ilk):
