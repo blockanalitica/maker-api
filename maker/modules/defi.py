@@ -24,36 +24,67 @@ from maker.utils.blockchain.chain import Blockchain
 from maker.utils.utils import timestamp_to_full_hour
 
 
+def get_aave_rates(underlying_symbol, days_ago=1):
+    rates = fetch_aave_rates(underlying_symbol, days_ago=days_ago)
+    rates_mapping = defaultdict(dict)
+    for rate in rates:
+        rates_mapping[rate["dt"]][rate["underlying_symbol"]] = {
+            "supply_rate": rate["supply_rate"],
+            "borrow_rate": rate["borrow_rate"],
+        }
+    return rates_mapping
+
+
 def save_rates_for_aave(underlying_symbol):
     dt = datetime.fromtimestamp(timestamp_to_full_hour(datetime.now()))
-    rates = fetch_aave_rates(underlying_symbol)
-    Rates.objects.get_or_create(
-        datetime=dt,
-        symbol=underlying_symbol,
-        protocol="aave",
-        defaults=dict(
-            eth_rate=rates["eth_rate"],
-            eth_reward_rate=rates["eth_reward_rate"],
-            borrow_rate=rates["borrow_rate"],
-            rewards_rate=rates["borrow_reward_rate"],
-        ),
-    )
+    rates_mapping = get_aave_rates(underlying_symbol, days_ago=1)
+    for dt, rates in rates_mapping.items():
+        if not rates.get("WETH") or not rates.get(underlying_symbol):
+            continue
+        Rates.objects.get_or_create(
+            datetime=dt,
+            symbol=underlying_symbol,
+            protocol="aave",
+            defaults=dict(
+                eth_rate=rates["WETH"]["supply_rate"],
+                eth_reward_rate=0,
+                borrow_rate=rates[underlying_symbol]["borrow_rate"],
+                rewards_rate=0,
+            ),
+        )
+
+
+def get_compound_rates(underlying_symbol, days_ago=1):
+    rates = fetch_compound_rates(underlying_symbol, days_ago=days_ago)
+    rates_mapping = defaultdict(dict)
+    for rate in rates:
+        rates_mapping[rate["dt"]][rate["underlying_symbol"]] = {
+            "supply_rate": rate["supply_rate"],
+            "borrow_rate": rate["borrow_rate"],
+            "supply_reward_rate": rate["supply_reward_rate"],
+            "borrow_reward_rate": rate["borrow_reward_rate"],
+        }
+    return rates_mapping
 
 
 def save_rates_for_comp(underlying_symbol):
     dt = datetime.fromtimestamp(timestamp_to_full_hour(datetime.now()))
-    rates = fetch_compound_rates(underlying_symbol)
-    Rates.objects.get_or_create(
-        datetime=dt,
-        symbol=underlying_symbol,
-        protocol="compound",
-        defaults=dict(
-            eth_rate=rates["eth_rate"],
-            eth_reward_rate=rates["eth_reward_rate"],
-            borrow_rate=rates["borrow_rate"],
-            rewards_rate=rates["borrow_reward_rate"],
-        ),
-    )
+    rates_mapping = get_compound_rates(underlying_symbol, days_ago=1)
+
+    for dt, rates in rates_mapping.items():
+        if not rates.get("WETH") or not rates.get(underlying_symbol):
+            continue
+        Rates.objects.get_or_create(
+            datetime=dt,
+            symbol=underlying_symbol,
+            protocol="compound",
+            defaults=dict(
+                eth_rate=rates["WETH"]["supply_rate"],
+                eth_reward_rate=rates["WETH"]["supply_reward_rate"],
+                borrow_rate=rates[underlying_symbol]["borrow_rate"],
+                rewards_rate=rates[underlying_symbol]["borrow_reward_rate"],
+            ),
+        )
 
 
 def save_rates_for_maker():
@@ -131,15 +162,69 @@ def get_rates(symbol, days_ago=30):
     return list(aave_rates) + list(comp_rates) + list(maker_rates)
 
 
+def get_current_rate(underlying_symbol, protocol, days_ago):
+    if protocol == "aave":
+        protocol = "AAVE"
+        rates_mapping = get_aave_rates(underlying_symbol, days_ago=days_ago)
+    elif protocol == "compound":
+        protocol = "COMP"
+        rates_mapping = get_compound_rates(underlying_symbol, days_ago=days_ago)
+
+    rates = []
+    for dt, values in rates_mapping.items():
+        if values.get(underlying_symbol) and values.get("WETH"):
+            values["datetime"] = dt
+            rates.append(values)
+
+    old = rates[0]
+    new = rates[-1]
+
+    supply_rate = new[underlying_symbol]["supply_rate"]
+    supply_reward_rate = new[underlying_symbol].get("supply_reward_rate", 0)
+    supply_net_rate = supply_rate + supply_reward_rate
+
+    borrow_rate = new[underlying_symbol]["borrow_rate"]
+    borrow_reward_rate = new[underlying_symbol].get("borrow_reward_rate", 0)
+    borrow_net_rate = borrow_rate - borrow_reward_rate
+
+    old_supply_rate = old[underlying_symbol]["supply_rate"]
+    old_supply_reward_rate = old[underlying_symbol].get("supply_reward_rate", 0)
+    old_supply_net_rate = old_supply_rate + old_supply_reward_rate
+
+    old_borrow_rate = old[underlying_symbol]["borrow_rate"]
+    old_borrow_reward_rate = old[underlying_symbol].get("borrow_reward_rate", 0)
+    old_borrow_net_rate = old_borrow_rate - old_borrow_reward_rate
+    item = {
+        "protocol": protocol,
+        "supply_rate": supply_rate,
+        "supply_reward_rate": supply_reward_rate,
+        "supply_net_rate": supply_net_rate,
+        "borrow_rate": borrow_rate,
+        "borrow_reward_rate": borrow_reward_rate,
+        "borrow_net_rate": borrow_net_rate,
+        "real_rate": borrow_rate - 2 * new["WETH"]["supply_rate"],
+        "eth_rate": new["WETH"]["supply_rate"],
+        "change": {
+            "supply_rate": old_supply_rate,
+            "supply_reward_rate": old_supply_reward_rate,
+            "supply_net_rate": old_supply_net_rate,
+            "borrow_rate": old_borrow_rate,
+            "borrow_reward_rate": old_borrow_reward_rate,
+            "borrow_net_rate": old_borrow_net_rate,
+            "real_rate": old_borrow_rate - 2 * old["WETH"]["supply_rate"],
+            "eth_rate": old["WETH"]["supply_rate"],
+        },
+    }
+    return item
+
+
 def get_current_rates(symbol, days_ago=30):
     rates = []
 
-    aave_details = fetch_aave_rates(symbol, days_ago)
-    aave_details["protocol"] = "AAVE"
+    aave_details = get_current_rate(symbol, "aave", days_ago)
     rates.append(aave_details)
 
-    comp_details = fetch_compound_rates(symbol, days_ago)
-    comp_details["protocol"] = "COMP"
+    comp_details = get_current_rate(symbol, "compound", days_ago)
     rates.append(comp_details)
 
     if symbol == "DAI":
