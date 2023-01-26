@@ -10,6 +10,8 @@ from celery.schedules import crontab
 from django.core.cache import cache
 from django_bulk_load import bulk_update_models
 
+from maker.modules.balances import sync_wallet_balances
+
 from .celery import app
 from .constants import DRAWDOWN_PAIRS_HISTORY_DAYS, OHLCV_TYPE_DAILY, OHLCV_TYPE_HOURLY
 from .models import (
@@ -176,6 +178,9 @@ SCHEDULE = {
     },
     "set_active_slippages": {
         "schedule": crontab(minute="5", hour="0"),
+    },
+    "sync_debank_balances_task": {
+        "schedule": crontab(minute="30", hour="2"),
     },
 }
 
@@ -566,3 +571,8 @@ def update_vaults_market_price():
         "symbol", flat=True
     ):
         refresh_market_risk_for_vaults(symbol)
+
+
+@app.task
+def sync_debank_balances_task():
+    sync_wallet_balances()
