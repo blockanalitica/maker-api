@@ -188,6 +188,9 @@ class AllVaultPositionsView(PaginatedApiView):
         "principal_change_30d",
         "last_activity",
         "liquidation_drop",
+        "protection_score",
+        "collateralization",
+        "liquidation_price",
     ]
     serializer_class = VaultPositionsViewSerializer
 
