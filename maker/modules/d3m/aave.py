@@ -72,6 +72,9 @@ def get_d3m_short_info():
     d3m_data = D3M.objects.filter(protocol="aave").latest()
     balance = get_current_balance(d3m_data.balance_contract)
 
+    utilization = 0
+    if d3m_data.max_debt_ceiling:
+        utilization = balance / d3m_data.max_debt_ceiling
     return {
         "protocol": "AAVE",
         "protocol_slug": "aave",
@@ -80,7 +83,7 @@ def get_d3m_short_info():
         "target_borrow_rate": d3m_data.target_borrow_rate,
         "symbol": "aDAI",
         "title": "Aave",
-        "utilization": balance / d3m_data.max_debt_ceiling,
+        "utilization": utilization,
     }
 
 
