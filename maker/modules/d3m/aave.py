@@ -93,6 +93,10 @@ def get_d3m_info():
     surplus_buffer = SurplusBuffer.objects.latest().amount
     stats = get_dai_market()
     balance = get_current_balance(d3m_data.balance_contract)
+
+    utilization = 0
+    if d3m_data.max_debt_ceiling:
+        utilization = balance / d3m_data.max_debt_ceiling
     data = {
         "protocol": "AAVE",
         "protocol_slug": "aave",
@@ -101,7 +105,7 @@ def get_d3m_info():
         "target_borrow_rate": d3m_data.target_borrow_rate,
         "symbol": "aDAI",
         "title": "Aave",
-        "utilization_balance": balance / d3m_data.max_debt_ceiling,
+        "utilization_balance": utilization,
         "surplus_buffer": surplus_buffer,
         "utilization_surplus_buffer": balance / surplus_buffer,
         "supply_utilization": None,
