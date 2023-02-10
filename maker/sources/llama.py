@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: © 2022 Dai Foundation <www.daifoundation.org>
+#
+# SPDX-License-Identifier: Apache-2.0
+
 from maker.utils.http import retry_get_json
 
 LLAMA_COINS_API_URL = "https://coins.llama.fi/"
