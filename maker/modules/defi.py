@@ -35,9 +35,9 @@ def get_aave_rates(underlying_symbol, days_ago=1):
     return rates_mapping
 
 
-def save_rates_for_aave(underlying_symbol):
+def save_rates_for_aave(underlying_symbol, days_ago=1):
     dt = datetime.fromtimestamp(timestamp_to_full_hour(datetime.now()))
-    rates_mapping = get_aave_rates(underlying_symbol, days_ago=1)
+    rates_mapping = get_aave_rates(underlying_symbol, days_ago=days_ago)
     for dt, rates in rates_mapping.items():
         if not rates.get("WETH") or not rates.get(underlying_symbol):
             continue
