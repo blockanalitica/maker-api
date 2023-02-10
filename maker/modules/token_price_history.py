@@ -1,19 +1,22 @@
 # SPDX-FileCopyrightText: © 2022 Dai Foundation <www.daifoundation.org>
 #
 # SPDX-License-Identifier: Apache-2.0
-
+import logging
 from datetime import datetime
 from decimal import Decimal
 
 from django.conf import settings
+from django.db import IntegrityError
 from django_bulk_load import bulk_insert_models
 from web3 import Web3
 
 from maker.constants import CHAINLINK_PROXY_ADDRESSES
 from maker.models import Asset, MarketPrice, TokenPriceHistory
-from maker.sources.cryptocompare import get_prices
+from maker.sources.llama import fetch_current_price
 from maker.utils.blockchain.chain import Blockchain
 from maker.utils.utils import chunks
+
+log = logging.getLogger(__name__)
 
 
 def sync_chainlink_rounds():
@@ -415,15 +418,30 @@ def get_token_aggregators(underlying_address, phase, chain=None):
 
 
 def save_market_prices():
-    # RETH is a different token on chainlink, so don't store it
-    symbols = Asset.objects.exclude(symbol="RETH").values_list("symbol", flat=True)
-    prices = get_prices(list(symbols))
-    dt = datetime.now()
-    for symbol, value in prices.items():
+    markets = Asset.objects.values("symbol", "address")
+
+    coins = []
+    for market in markets:
+        coins.append("ethereum:{}".format(market["address"]))
+
+    # Deduplicate coins
+    coins = list(set(coins))
+    data = fetch_current_price(coins)
+    for coin in coins:
+        info = data[coin]
+        symbol = info["symbol"].upper()
         if symbol == "WETH":
+            symbol = "ETH"
+        try:
             MarketPrice.objects.create(
-                symbol="ETH", price=value["USD"], timestamp=dt.timestamp(), datetime=dt
+                symbol=symbol,
+                price=info["price"],
+                timestamp=info["timestamp"],
+                datetime=datetime.fromtimestamp(info["timestamp"]),
             )
-        MarketPrice.objects.create(
-            symbol=symbol, price=value["USD"], timestamp=dt.timestamp(), datetime=dt
-        )
+        except IntegrityError:
+            log.debug(
+                "MarketPrice for %s and timestamp %s already exists",
+                info["symbol"],
+                info["timestamp"],
+            )

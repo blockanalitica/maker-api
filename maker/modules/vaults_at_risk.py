@@ -130,7 +130,9 @@ def refresh_market_risk_for_vaults(symbol):
     except MarketPrice.DoesNotExist:
         return
     for ilk in Ilk.objects.filter(collateral=symbol):
-        Vault.objects.filter(ilk=ilk.ilk, is_active=True).update(mkt_price=market_price)
+        Vault.objects.filter(ilk=ilk.ilk, is_active=True).update(
+            mkt_price=market_price, is_at_risk_market=False
+        )
         Vault.objects.filter(
             ilk=ilk.ilk, is_active=True, liquidation_price__gte=market_price
         ).update(is_at_risk_market=True)
