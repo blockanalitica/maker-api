@@ -11,6 +11,7 @@ import pytz
 import requests
 from django.db.models.functions import TruncDay, TruncHour
 from django.utils.timezone import make_aware
+from web3.exceptions import BadFunctionCallOutput, ContractLogicError
 
 from maker.constants import (
     AWBTC_TOKEN_ADDRESS,
@@ -314,23 +315,31 @@ def fetch_maker_balances(chain, block_number=None, dt=None):
         )
     _save_balance(balance / 10**8, "WBTC", protocol, dt)
 
-    wallets = [
-        "0x10CD5fbe1b404B7E19Ef964B63939907bdaf42E2",
-        "0x248cCBf4864221fC0E840F29BB042ad5bFC89B5c",
-    ]
-    balance = Decimal("0")
-    for wallet_address in wallets:
-        balance += chain.get_balance_of(
-            "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0", wallet_address, block_number
-        )
-    _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+    try:
+        wallets = [
+            "0x10CD5fbe1b404B7E19Ef964B63939907bdaf42E2",
+            "0x248cCBf4864221fC0E840F29BB042ad5bFC89B5c",
+        ]
+        balance = Decimal("0")
+        for wallet_address in wallets:
+            balance += chain.get_balance_of(
+                "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                wallet_address,
+                block_number,
+            )
+        _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+    except (BadFunctionCallOutput, ContractLogicError):
+        pass
 
-    balance = chain.get_balance_of(
-        "0xae78736cd615f374d3085123a210448e74fc6393",
-        "0xC6424e862f1462281B0a5FAc078e4b63006bDEBF",
-        block_number,
-    )
-    _save_balance(convert_wei_to_decimal(balance), "rETH", protocol, dt)
+    try:
+        balance = chain.get_balance_of(
+            "0xae78736cd615f374d3085123a210448e74fc6393",
+            "0xC6424e862f1462281B0a5FAc078e4b63006bDEBF",
+            block_number,
+        )
+        _save_balance(convert_wei_to_decimal(balance), "rETH", protocol, dt)
+    except (BadFunctionCallOutput, ContractLogicError):
+        pass
 
 
 def fetch_aave2_balances(chain, block_number=None, dt=None):
@@ -351,12 +360,15 @@ def fetch_aave2_balances(chain, block_number=None, dt=None):
     )
     _save_balance(convert_wei_to_decimal(balance), "DAI", protocol, dt)
 
-    balance = chain.get_balance_of(
-        "0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
-        "0x1982b2f5814301d4e9a8b0201555376e62f82428",
-        block_number,
-    )
-    _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+    try:
+        balance = chain.get_balance_of(
+            "0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
+            "0x1982b2f5814301d4e9a8b0201555376e62f82428",
+            block_number,
+        )
+        _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+    except (BadFunctionCallOutput, ContractLogicError):
+        pass
 
 
 def fetch_aavev3_balances(chain, block_number=None, dt=None):
@@ -381,19 +393,25 @@ def fetch_aavev3_balances(chain, block_number=None, dt=None):
     )
     _save_balance(convert_wei_to_decimal(balance), "DAI", protocol, dt)
 
-    balance = chain.get_balance_of(
-        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
-        "0x0b925ed163218f6662a35e0f0371ac234f9e9371",
-        block_number,
-    )
-    _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+    try:
+        balance = chain.get_balance_of(
+            "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "0x0b925ed163218f6662a35e0f0371ac234f9e9371",
+            block_number,
+        )
+        _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+    except (BadFunctionCallOutput, ContractLogicError):
+        pass
 
-    balance = chain.get_balance_of(
-        "0xae78736cd615f374d3085123a210448e74fc6393",
-        "0xCc9EE9483f662091a1de4795249E24aC0aC2630f",
-        block_number,
-    )
-    _save_balance(convert_wei_to_decimal(balance), "rETH", protocol, dt)
+    try:
+        balance = chain.get_balance_of(
+            "0xae78736cd615f374d3085123a210448e74fc6393",
+            "0xCc9EE9483f662091a1de4795249E24aC0aC2630f",
+            block_number,
+        )
+        _save_balance(convert_wei_to_decimal(balance), "rETH", protocol, dt)
+    except (BadFunctionCallOutput, ContractLogicError):
+        pass
 
 
 def fetch_comp_balances(chain, block_number=None, dt=None):
@@ -438,12 +456,15 @@ def fetch_comp_v3_balances(chain, block_number=None, dt=None):
         )
     _save_balance(convert_wei_to_decimal(balance), "WETH", protocol, dt)
 
-    balance = chain.get_balance_of(
-        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
-        "0xA17581A9E3356d9A858b789D68B4d866e593aE94",
-        block_number,
-    )
-    _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+    try:
+        balance = chain.get_balance_of(
+            "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "0xA17581A9E3356d9A858b789D68B4d866e593aE94",
+            block_number,
+        )
+        _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+    except (BadFunctionCallOutput, ContractLogicError):
+        pass
 
     balance = chain.get_balance_of(
         "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
@@ -484,12 +505,15 @@ def fetch_euler_balances(chain, block_number=None, dt=None):
     )
     _save_balance(convert_wei_to_decimal(balance), "DAI", protocol, dt)
 
-    balance = chain.get_balance_of(
-        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
-        "0x27182842e098f60e3d576794a5bffb0777e025d3",
-        block_number,
-    )
-    _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+    try:
+        balance = chain.get_balance_of(
+            "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "0x27182842e098f60e3d576794a5bffb0777e025d3",
+            block_number,
+        )
+        _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+    except (BadFunctionCallOutput, ContractLogicError):
+        pass
 
 
 def fetch_defi_balance():
@@ -505,13 +529,14 @@ def fetch_defi_balance():
 def backpopulate_defi_balance(blocks):
     chain = Blockchain()
     for data in blocks:
-        fetch_euler_balances(chain, data["block_number"], data["dt"])
+        # print(data)
         fetch_maker_balances(chain, data["block_number"], data["dt"])
         fetch_aavev3_balances(chain, data["block_number"], data["dt"])
-        # fetch_aave2_balances(chain, data["block_number"], data["dt"])
-        # fetch_comp_balances(chain, data["block_number"], data["dt"])
-        # fetch_comp_v3_balances(chain, data["block_number"], data["dt"])
-        # fetch_alchemix_balances(chain, data["block_number"], data["dt"])
+        fetch_euler_balances(chain, data["block_number"], data["dt"])
+        fetch_aave2_balances(chain, data["block_number"], data["dt"])
+        fetch_comp_balances(chain, data["block_number"], data["dt"])
+        fetch_comp_v3_balances(chain, data["block_number"], data["dt"])
+        fetch_alchemix_balances(chain, data["block_number"], data["dt"])
 
 
 def run_query(uri, query, statusCode=200):
