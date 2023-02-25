@@ -462,6 +462,36 @@ def fetch_alchemix_balances(chain, block_number=None, dt=None):
     _save_balance(convert_wei_to_decimal(balance), "DAI", protocol, dt)
 
 
+def fetch_euler_balances(chain, block_number=None, dt=None):
+
+    if block_number and block_number < 13687582:
+        return
+
+    protocol = "euler"
+
+    balance = chain.get_balance_of(
+        WETH_TOKEN_ADDRESS, "0x27182842e098f60e3d576794a5bffb0777e025d3", block_number
+    )
+    _save_balance(convert_wei_to_decimal(balance), "WETH", protocol, dt)
+
+    balance = chain.get_balance_of(
+        WBTC_TOKEN_ADDRESS, "0x27182842e098f60e3d576794a5bffb0777e025d3", block_number
+    )
+    _save_balance(balance / 10**8, "WBTC", protocol, dt)
+
+    balance = chain.get_balance_of(
+        DAI_TOKEN_ADDRESS, "0x27182842e098f60e3d576794a5bffb0777e025d3", block_number
+    )
+    _save_balance(convert_wei_to_decimal(balance), "DAI", protocol, dt)
+
+    balance = chain.get_balance_of(
+        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        "0x27182842e098f60e3d576794a5bffb0777e025d3",
+        block_number,
+    )
+    _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+
+
 def fetch_defi_balance():
     chain = Blockchain()
     fetch_maker_balances(chain)
@@ -475,10 +505,10 @@ def fetch_defi_balance():
 def backpopulate_defi_balance(blocks):
     chain = Blockchain()
     for data in blocks:
-        # print(data)
+        fetch_euler_balances(chain, data["block_number"], data["dt"])
         fetch_maker_balances(chain, data["block_number"], data["dt"])
-        # fetch_aave2_balances(chain, data["block_number"], data["dt"])
         fetch_aavev3_balances(chain, data["block_number"], data["dt"])
+        # fetch_aave2_balances(chain, data["block_number"], data["dt"])
         # fetch_comp_balances(chain, data["block_number"], data["dt"])
         # fetch_comp_v3_balances(chain, data["block_number"], data["dt"])
         # fetch_alchemix_balances(chain, data["block_number"], data["dt"])
