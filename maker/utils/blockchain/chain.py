@@ -78,15 +78,19 @@ class Blockchain:
             abi = self._load_abi(token_address)
         return self.web3.eth.contract(address=token_address, abi=abi)
 
-    def get_balance_of(self, token_address, wallet_address):
+    def get_balance_of(self, token_address, wallet_address, block_number=None):
         """
         Helper function for getting balance from a wallet.
         It converts the balance into Decimal.
         """
+        if not block_number:
+            block_number = "latest"
         token_address = Web3.toChecksumAddress(token_address)
         contract = self.get_contract(token_address, abi_type="erc20")
         wallet_address = Web3.toChecksumAddress(wallet_address)
-        balance = contract.caller.balanceOf(wallet_address)
+        balance = contract.functions.balanceOf(wallet_address).call(
+            block_identifier=block_number
+        )
         return Decimal(balance)
 
     def get_total_supply(self, token_address):
