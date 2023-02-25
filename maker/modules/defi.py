@@ -325,6 +325,13 @@ def fetch_maker_balances(chain, block_number=None, dt=None):
         )
     _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
 
+    balance = chain.get_balance_of(
+        "0xae78736cd615f374d3085123a210448e74fc6393",
+        "0xC6424e862f1462281B0a5FAc078e4b63006bDEBF",
+        block_number,
+    )
+    _save_balance(convert_wei_to_decimal(balance), "rETH", protocol, dt)
+
 
 def fetch_aave2_balances(chain, block_number=None, dt=None):
     protocol = "aaveV2"
@@ -380,6 +387,13 @@ def fetch_aavev3_balances(chain, block_number=None, dt=None):
         block_number,
     )
     _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+
+    balance = chain.get_balance_of(
+        "0xae78736cd615f374d3085123a210448e74fc6393",
+        "0xCc9EE9483f662091a1de4795249E24aC0aC2630f",
+        block_number,
+    )
+    _save_balance(convert_wei_to_decimal(balance), "rETH", protocol, dt)
 
 
 def fetch_comp_balances(chain, block_number=None, dt=None):
@@ -461,11 +475,12 @@ def fetch_defi_balance():
 def backpopulate_defi_balance(blocks):
     chain = Blockchain()
     for data in blocks:
+        # print(data)
         fetch_maker_balances(chain, data["block_number"], data["dt"])
-        fetch_aave2_balances(chain, data["block_number"], data["dt"])
+        # fetch_aave2_balances(chain, data["block_number"], data["dt"])
         fetch_aavev3_balances(chain, data["block_number"], data["dt"])
         # fetch_comp_balances(chain, data["block_number"], data["dt"])
-        fetch_comp_v3_balances(chain, data["block_number"], data["dt"])
+        # fetch_comp_v3_balances(chain, data["block_number"], data["dt"])
         # fetch_alchemix_balances(chain, data["block_number"], data["dt"])
 
 
