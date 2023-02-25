@@ -353,6 +353,10 @@ def fetch_aave2_balances(chain, block_number=None, dt=None):
 
 
 def fetch_aavev3_balances(chain, block_number=None, dt=None):
+
+    if block_number and block_number < 16496700:
+        return
+
     protocol = "aaveV3"
 
     balance = chain.get_balance_of(
@@ -404,6 +408,9 @@ def fetch_comp_balances(chain, block_number=None, dt=None):
 
 
 def fetch_comp_v3_balances(chain, block_number=None, dt=None):
+    if block_number and block_number < 15331586:
+        return
+
     protocol = "compoundV3"
 
     wallets = [
