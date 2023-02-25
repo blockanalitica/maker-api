@@ -524,6 +524,7 @@ def fetch_defi_balance():
     fetch_comp_balances(chain)
     fetch_comp_v3_balances(chain)
     fetch_alchemix_balances(chain)
+    fetch_euler_balances(chain)
 
 
 def backpopulate_defi_balance(blocks):
