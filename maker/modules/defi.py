@@ -277,17 +277,17 @@ def convert_wei_to_decimal(value):
 def _save_balance(balance, asset_symbol, protocol, dt=None):
     if not dt:
         dt = datetime.now()
-    DEFILocked.objects.create(
+    DEFILocked.objects.update_or_create(
         protocol=protocol,
         underlying_symbol=asset_symbol,
         date=dt.date(),
         datetime=dt,
         timestamp=dt.timestamp(),
-        balance=balance,
+        defaults={"balance": balance},
     )
 
 
-def fetch_maker_balances(chain, block_number=None):
+def fetch_maker_balances(chain, block_number=None, dt=None):
     protocol = "maker"
 
     wallets = [
@@ -297,8 +297,10 @@ def fetch_maker_balances(chain, block_number=None):
     ]
     balance = Decimal("0")
     for wallet_address in wallets:
-        balance += chain.get_balance_of(WETH_TOKEN_ADDRESS, wallet_address)
-    _save_balance(convert_wei_to_decimal(balance), "WETH", protocol)
+        balance += chain.get_balance_of(
+            WETH_TOKEN_ADDRESS, wallet_address, block_number
+        )
+    _save_balance(convert_wei_to_decimal(balance), "WETH", protocol, dt)
 
     wallets = [
         "0xBF72Da2Bd84c5170618Fbe5914B0ECA9638d5eb5",
@@ -307,32 +309,82 @@ def fetch_maker_balances(chain, block_number=None):
     ]
     balance = Decimal("0")
     for wallet_address in wallets:
-        balance += chain.get_balance_of(WBTC_TOKEN_ADDRESS, wallet_address)
-    _save_balance(balance / 10**8, "WBTC", protocol)
+        balance += chain.get_balance_of(
+            WBTC_TOKEN_ADDRESS, wallet_address, block_number
+        )
+    _save_balance(balance / 10**8, "WBTC", protocol, dt)
+
+    wallets = [
+        "0x10CD5fbe1b404B7E19Ef964B63939907bdaf42E2",
+        "0x248cCBf4864221fC0E840F29BB042ad5bFC89B5c",
+    ]
+    balance = Decimal("0")
+    for wallet_address in wallets:
+        balance += chain.get_balance_of(
+            "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0", wallet_address, block_number
+        )
+    _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
 
 
-def fetch_aave2_balances(chain, block_number=None):
+def fetch_aave2_balances(chain, block_number=None, dt=None):
     protocol = "aaveV2"
 
     balance = chain.get_balance_of(
-        WETH_TOKEN_ADDRESS, "0x030bA81f1c18d280636F32af80b9AAd02Cf0854e"
+        WETH_TOKEN_ADDRESS, "0x030bA81f1c18d280636F32af80b9AAd02Cf0854e", block_number
     )
-    _save_balance(convert_wei_to_decimal(balance), "WETH", protocol)
-
-    balance = chain.get_balance_of(WBTC_TOKEN_ADDRESS, AWBTC_TOKEN_ADDRESS)
-    _save_balance(balance / 10**8, "WBTC", protocol)
+    _save_balance(convert_wei_to_decimal(balance), "WETH", protocol, dt)
 
     balance = chain.get_balance_of(
-        DAI_TOKEN_ADDRESS, "0x028171bCA77440897B824Ca71D1c56caC55b68A3"
+        WBTC_TOKEN_ADDRESS, AWBTC_TOKEN_ADDRESS, block_number
     )
-    _save_balance(convert_wei_to_decimal(balance), "DAI", protocol)
+    _save_balance(balance / 10**8, "WBTC", protocol, dt)
+
+    balance = chain.get_balance_of(
+        DAI_TOKEN_ADDRESS, "0x028171bCA77440897B824Ca71D1c56caC55b68A3", block_number
+    )
+    _save_balance(convert_wei_to_decimal(balance), "DAI", protocol, dt)
+
+    balance = chain.get_balance_of(
+        "0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
+        "0x1982b2f5814301d4e9a8b0201555376e62f82428",
+        block_number,
+    )
+    _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
 
 
-def fetch_comp_balances(chain, block_number=None):
+def fetch_aavev3_balances(chain, block_number=None, dt=None):
+    protocol = "aaveV3"
+
+    balance = chain.get_balance_of(
+        WETH_TOKEN_ADDRESS, "0x4d5f47fa6a74757f35c14fd3a6ef8e3c9bc514e8", block_number
+    )
+    _save_balance(convert_wei_to_decimal(balance), "WETH", protocol, dt)
+
+    balance = chain.get_balance_of(
+        WBTC_TOKEN_ADDRESS, "0x5ee5bf7ae06d1be5997a1a72006fe6c607ec6de8", block_number
+    )
+    _save_balance(balance / 10**8, "WBTC", protocol, dt)
+
+    balance = chain.get_balance_of(
+        DAI_TOKEN_ADDRESS, "0x018008bfb33d285247a21d44e50697654f754e63", block_number
+    )
+    _save_balance(convert_wei_to_decimal(balance), "DAI", protocol, dt)
+
+    balance = chain.get_balance_of(
+        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        "0x0b925ed163218f6662a35e0f0371ac234f9e9371",
+        block_number,
+    )
+    _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+
+
+def fetch_comp_balances(chain, block_number=None, dt=None):
     protocol = "compound"
 
-    balance = chain.eth.get_balance("0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5")
-    _save_balance(convert_wei_to_decimal(balance), "WETH", protocol)
+    balance = chain.eth.get_balance(
+        "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5", block_number
+    )
+    _save_balance(convert_wei_to_decimal(balance), "WETH", protocol, dt)
 
     wallets = [
         "0xccF4429DB6322D5C611ee964527D42E5d685DD6a",
@@ -340,30 +392,74 @@ def fetch_comp_balances(chain, block_number=None):
     ]
     balance = Decimal("0")
     for wallet_address in wallets:
-        balance += chain.get_balance_of(WBTC_TOKEN_ADDRESS, wallet_address)
-    _save_balance(balance / 10**8, "WBTC", protocol)
+        balance += chain.get_balance_of(
+            WBTC_TOKEN_ADDRESS, wallet_address, block_number
+        )
+    _save_balance(balance / 10**8, "WBTC", protocol, dt)
 
     balance = chain.get_balance_of(
-        DAI_TOKEN_ADDRESS, "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643"
+        DAI_TOKEN_ADDRESS, "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643", block_number
     )
-    _save_balance(convert_wei_to_decimal(balance), "DAI", protocol)
+    _save_balance(convert_wei_to_decimal(balance), "DAI", protocol, dt)
 
 
-def fetch_alchemix_balances(chain, block_number=None):
+def fetch_comp_v3_balances(chain, block_number=None, dt=None):
+    protocol = "compoundV3"
+
+    wallets = [
+        "0xA17581A9E3356d9A858b789D68B4d866e593aE94",
+        "0xc3d688B66703497DAA19211EEdff47f25384cdc3",
+    ]
+    balance = Decimal("0")
+    for wallet_address in wallets:
+        balance += chain.get_balance_of(
+            WETH_TOKEN_ADDRESS, wallet_address, block_number
+        )
+    _save_balance(convert_wei_to_decimal(balance), "WETH", protocol, dt)
+
+    balance = chain.get_balance_of(
+        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        "0xA17581A9E3356d9A858b789D68B4d866e593aE94",
+        block_number,
+    )
+    _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+
+    balance = chain.get_balance_of(
+        "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+        "0xc3d688B66703497DAA19211EEdff47f25384cdc3",
+        block_number,
+    )
+    _save_balance(balance / 10**8, "WBTC", protocol, dt)
+
+
+def fetch_alchemix_balances(chain, block_number=None, dt=None):
     protocol = "alchemix"
 
     balance = chain.get_balance_of(
-        DAI_TOKEN_ADDRESS, "0xeE69BD81Bd056339368c97c4B2837B4Dc4b796E7"
+        DAI_TOKEN_ADDRESS, "0xeE69BD81Bd056339368c97c4B2837B4Dc4b796E7", block_number
     )
-    _save_balance(convert_wei_to_decimal(balance), "DAI", protocol)
+    _save_balance(convert_wei_to_decimal(balance), "DAI", protocol, dt)
 
 
 def fetch_defi_balance():
     chain = Blockchain()
     fetch_maker_balances(chain)
     fetch_aave2_balances(chain)
+    fetch_aavev3_balances(chain)
     fetch_comp_balances(chain)
+    fetch_comp_v3_balances(chain)
     fetch_alchemix_balances(chain)
+
+
+def backpopulate_defi_balance(blocks):
+    chain = Blockchain()
+    for data in blocks:
+        fetch_maker_balances(chain, data["block_number"], data["dt"])
+        fetch_aave2_balances(chain, data["block_number"], data["dt"])
+        fetch_aavev3_balances(chain, data["block_number"], data["dt"])
+        # fetch_comp_balances(chain, data["block_number"], data["dt"])
+        fetch_comp_v3_balances(chain, data["block_number"], data["dt"])
+        # fetch_alchemix_balances(chain, data["block_number"], data["dt"])
 
 
 def run_query(uri, query, statusCode=200):

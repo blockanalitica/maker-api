@@ -37,7 +37,9 @@ class DEFILockedView(APIView):
         days_ago = int(request.GET.get("days_ago", 7))
         d = (datetime.now() - timedelta(days=days_ago)).date()
         locked = (
-            DEFILocked.objects.filter(underlying_symbol=symbol, date__gte=d)
+            DEFILocked.objects.filter(
+                underlying_symbol=symbol, date__gte=d, balance__gt=0
+            )
             .values("protocol", "date", "balance")
             .order_by("datetime")
         )
