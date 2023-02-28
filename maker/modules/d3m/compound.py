@@ -192,7 +192,7 @@ class D3MCompoundCompute:
     @property
     def d3m_model(self):
         if not self._d3m_model:
-            self._d3m_model = D3M.objects.filter(protocol="aave").latest()
+            self._d3m_model = D3M.objects.filter(protocol="compound").latest()
         return self._d3m_model
 
     def get_d3m_balance(self):

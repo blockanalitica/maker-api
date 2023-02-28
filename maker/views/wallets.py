@@ -151,4 +151,5 @@ class WalletEventsView(WalletMixin, PaginatedApiView):
             "osm_price",
             "vault_uid",
             "ilk",
+            "tx_hash",
         )
