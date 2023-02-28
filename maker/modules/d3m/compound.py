@@ -17,6 +17,7 @@ from maker.utils.blockchain.chain import Blockchain
 from .helper import get_d3m_contract_data
 
 D3M_COMP = "0x621fE4Fde2617ea8FFadE08D0FF5A862aD287EC2"
+COMPTROLLER_ADDRESS = "0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B"
 
 
 RESERVE_FACTOR = 0.15
@@ -154,8 +155,31 @@ def get_compound_dai_market():
         )
     )
 
+    token_calls.append(
+        (
+            COMPTROLLER_ADDRESS,
+            ["compSupplySpeeds(address)(uint256)", token_address],
+            ["supply_rewards_rate", None],
+        )
+    )
+    token_calls.append(
+        (
+            "0x65c816077C29b557BEE980ae3cC2dCE80204A0C5",
+            ["price(string)(uint256)", "COMP"],
+            ["comp_price", None],
+        )
+    )
+    token_calls.append(
+        (
+            "0x65c816077C29b557BEE980ae3cC2dCE80204A0C5",
+            ["getUnderlyingPrice(address)(uint256)", token_address],
+            ["underlying_price", None],
+        )
+    )
+
     w3 = Blockchain()
     data = w3.call_multicall(token_calls)
+    underlying_price = Decimal(data["underlying_price"]) / Decimal(1e18)
     data["total_supply"] = (data["total_supply"] / 10**8) * (
         data["exchange_rate"] / 10**28
     )
@@ -164,6 +188,17 @@ def get_compound_dai_market():
     data["borrow_rate"] = data["borrow_rate"] * BLOCKS_PER_YEAR / 1e18
     data["exchange_rate"] = data["exchange_rate"]
     data["utilization"] = data["total_borrow"] / data["total_supply"]
+    supply_reward_rate = 0
+    supply_reward_emission = data["supply_rewards_rate"] / 1e18
+    if supply_reward_emission > 0:
+        comp_supply_rewards_per_year = Decimal(supply_reward_emission * BLOCKS_PER_YEAR)
+        supply_reward_rate = (
+            Decimal((Decimal(data["comp_price"]) / Decimal(1e6)))
+            * Decimal(comp_supply_rewards_per_year)
+        ) / (Decimal(data["total_supply"]) * underlying_price)
+    data["supply_reward_rate"] = supply_reward_rate
+    data["comp_price"] = Decimal(data["comp_price"]) / Decimal(1e6)
+    data["comp_supply_rewards_per_year"] = comp_supply_rewards_per_year
     return data
 
 
@@ -186,6 +221,12 @@ class D3MCompoundCompute:
                 "total_supply": Decimal(str(rate["total_supply"])),
                 "total_borrow": Decimal(str(rate["total_borrow"])),
                 "borrow_rate": Decimal(str(rate["borrow_rate"])),
+                "supply_rate": Decimal(str(rate["supply_rate"])),
+                "supply_rate_reward": Decimal(str(rate["supply_rate"])),
+                "comp_price": Decimal(str(rate["comp_price"])),
+                "comp_supply_rewards_per_year": Decimal(
+                    str(rate["comp_supply_rewards_per_year"])
+                ),
             }
         return self._rates
 
@@ -331,6 +372,15 @@ class D3MCompoundCompute:
             d3m_exposure + d3m_current_dai
         )
 
+        simulation_supply_reward_rate = (
+            Decimal((rates["comp_price"]))
+            * Decimal(rates["comp_supply_rewards_per_year"])
+        ) / (Decimal(simulation_dai_supply))
+
+        d3m_revenue_rewards = simulation_supply_reward_rate * (
+            d3m_exposure + d3m_current_dai
+        )
+
         data = {
             "d3m_dc": d3m_dc,
             "target_borrow_rate": target_borrow_rate,
@@ -344,8 +394,10 @@ class D3MCompoundCompute:
             "simulation_dai_supply_target": simulation_dai_supply_target,
             "simulation_utilization_rate_target": simulation_utilization_rate_target,
             "implied_supply_rate": implied_supply_rate,
+            "simulation_supply_reward_rate": simulation_supply_reward_rate,
             "share_dai_deposits": share_dai_deposits,
             "d3m_revenue": d3m_revenue_excl_rewards,
+            "d3m_revenue_rewards": d3m_revenue_rewards,
             "d3m_balance": d3m_current_dai,
             "d3m_exposure_total": d3m_current_dai + d3m_exposure,
         }
