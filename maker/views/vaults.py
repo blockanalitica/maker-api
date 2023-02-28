@@ -64,6 +64,7 @@ class VaultEventsViewViewSerializer(serpy.DictSerializer):
     before_ratio = serpy.Field()
     after_ratio = serpy.Field()
     osm_price = serpy.Field()
+    tx_hash = serpy.Field()
 
 
 class VaultView(APIView):
@@ -108,6 +109,7 @@ class VaultEventsView(PaginatedApiView):
             "before_ratio",
             "after_ratio",
             "osm_price",
+            "tx_hash",
         )
 
 
