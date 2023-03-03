@@ -1057,3 +1057,16 @@ class WalletTokenBalance(models.Model):
 
     class Meta:
         get_latest_by = "datetime"
+
+
+class WalletExternalProtocol(models.Model):
+    wallet_address = models.CharField(max_length=42, db_index=True)
+    protocol = models.CharField(max_length=64)
+    protocol_name = models.CharField(max_length=64)
+    net_usd_value = models.DecimalField(max_digits=32, decimal_places=18)
+    debt_usd_value = models.DecimalField(max_digits=32, decimal_places=18)
+    datetime = models.DateTimeField()
+    chain = models.CharField(max_length=32, null=True)
+
+    class Meta:
+        get_latest_by = "datetime"
