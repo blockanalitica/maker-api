@@ -67,4 +67,9 @@ def sync_wallet_balances():
     wallet_addresses = get_vaults_wallet_addresses()
     wallet_addresses = set(wallet_addresses)
     save_balances(wallet_addresses)
+
+
+def sync_save_protocols():
+    wallet_addresses = get_vaults_wallet_addresses()
+    wallet_addresses = set(wallet_addresses)
     save_protocols(wallet_addresses)

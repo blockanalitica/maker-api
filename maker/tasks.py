@@ -10,7 +10,7 @@ from celery.schedules import crontab
 from django.core.cache import cache
 from django_bulk_load import bulk_update_models
 
-from maker.modules.balances import sync_wallet_balances
+from maker.modules.balances import sync_save_protocols, sync_wallet_balances
 
 from .celery import app
 from .constants import DRAWDOWN_PAIRS_HISTORY_DAYS, OHLCV_TYPE_DAILY, OHLCV_TYPE_HOURLY
@@ -181,6 +181,9 @@ SCHEDULE = {
     },
     "sync_debank_balances_task": {
         "schedule": crontab(minute="30", hour="2"),
+    },
+    "sync_save_protocols_task": {
+        "schedule": crontab(minute="30", hour="1", day_of_week=1),
     },
 }
 
@@ -576,3 +579,8 @@ def update_vaults_market_price():
 @app.task
 def sync_debank_balances_task():
     sync_wallet_balances()
+
+
+@app.task(time_limit=45 * 60)
+def sync_save_protocols_task():
+    sync_save_protocols()
