@@ -265,14 +265,14 @@ class VaultCrHistoryView(APIView):
         data = []
 
         osms = (
-            OSM.objects.filter(timestamp__gte=start_cr, symbol=symbol)
+            OSM.objects.filter(timestamp__gte=start_timestamp, symbol=symbol)
             .values("current_price", "timestamp")
             .order_by("timestamp")
         )
         try:
             start_lr = (
                 IlkHistoricParams.objects.filter(
-                    ilk=vault.ilk, timestamp__lte=start_cr, type="lr"
+                    ilk=vault.ilk, timestamp__lte=start_timestamp, type="lr"
                 )
                 .latest()
                 .timestamp
