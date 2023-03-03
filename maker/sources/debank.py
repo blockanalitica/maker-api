@@ -16,3 +16,12 @@ def fetch_user_token_list(wallet_address):
         headers={"AccessKey": settings.DEBANK_API_KEY},
     )
     return data
+
+
+def fetch_user_protocols(wallet_address):
+    url = f"user/simple_protocol_list?id={wallet_address}&chain_id=eth"
+    data = retry_get_json(
+        "{}{}".format(DEBANK_API_URL, url),
+        headers={"AccessKey": settings.DEBANK_API_KEY},
+    )
+    return data
