@@ -13,7 +13,8 @@ from maker.sources.debank import fetch_user_protocols, fetch_user_token_list
 
 def get_vaults_wallet_addresses(debt_limit=1000):
     wallet_addresses = Vault.objects.filter(
-        debt__gte=debt_limit, owner_address__isnull=False
+        debt__gte=debt_limit,
+        owner_address__isnull=False,
     ).values_list("owner_address", flat=True)
     return wallet_addresses
 
