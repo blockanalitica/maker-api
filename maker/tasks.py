@@ -176,14 +176,14 @@ SCHEDULE = {
         # First day of the month
         "schedule": crontab(minute="0", hour="0", day_of_month="1"),
     },
-    # "set_active_slippages": {
-    #     "schedule": crontab(minute="5", hour="0"),
-    # },
+    "set_active_slippages": {
+        "schedule": crontab(minute="5", hour="0"),
+    },
     "sync_debank_balances_task": {
         "schedule": crontab(minute="30", hour="2"),
     },
     "sync_save_protocols_task": {
-        "schedule": crontab(minute="30", hour="1", day_of_week=1),
+        "schedule": crontab(minute="30", hour="1"),
     },
 }
 
