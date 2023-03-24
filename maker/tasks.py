@@ -62,7 +62,7 @@ from .modules.pool import save_pool_info
 from .modules.psm import claculate_and_save_psm_dai_supply
 from .modules.risk import save_overall_stats, save_surplus_buffer
 from .modules.risk_premium import compute_all_vault_types
-from .modules.slippage import save_oneinch_slippages
+from .modules.slippage import save_cow_slippages
 from .modules.token_price_history import save_market_prices, sync_chainlink_rounds
 from .modules.vault_protection_score import save_protection_score
 from .modules.vaults import save_vaults_changes
@@ -459,7 +459,8 @@ def get_slippage_for_slippage_pairs():
     pairs = SlippagePair.objects.filter(is_active=True)
     for slippage_pair in pairs:
         try:
-            save_oneinch_slippages(slippage_pair.id)
+            # save_oneinch_slippages(slippage_pair.id)
+            save_cow_slippages(slippage_pair.id)
         except:  # noqa
             # We're catching all and any exceptions so if one pair fails updating,
             # we keep synching other pairs

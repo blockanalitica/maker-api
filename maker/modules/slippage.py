@@ -10,8 +10,9 @@ from statistics import mean
 
 from requests.exceptions import RetryError
 
-from maker.constants import LIQUIDITY_COLLATERAL_ASSET_MAP
+from maker.constants import LIQUIDITY_COLLATERAL_ASSET_MAP, SLIPPAGE_PAIR_SOURCE_COW
 from maker.models import Asset, SlippageDaily, SlippagePair
+from maker.sources.cow import get_cow_quote
 from maker.sources.oneinch import get_oneinch_quote
 from maker.sources.zerox import get_zerox_quote
 from maker.utils.utils import get_date_days_ago, get_today_timestamp
@@ -20,20 +21,20 @@ log = logging.getLogger(__name__)
 
 
 def _generate_usd_amounts():
-    step = 10000
+    step = 10_000
     x = 0
     usd_amounts = []
-    while x < 5000000000:
+    while x < 3_000_000_000:
         x += step
         usd_amounts.append(x)
-        if x == 100000:
-            step = 100000
-        elif x == 1000000:
-            step = 1000000
-        elif x == 10000000:
-            step = 5000000
-        elif x == 100000000:
-            step = 10000000
+        if x == 100_000:
+            step = 100_000
+        elif x == 1_000_000:
+            step = 1_000_000
+        elif x == 10_000_000:
+            step = 5_000_000
+        elif x == 100_000_000:
+            step = 25_000_000
     return usd_amounts
 
 
@@ -104,6 +105,57 @@ def save_oneinch_slippages(slippage_pair_id):
     slippage_pair.save()
 
 
+def save_cow_slippages(slippage_pair_id):
+    slippage_pair = SlippagePair.objects.get(id=slippage_pair_id)
+    timestamp = get_today_timestamp()
+
+    from_asset = slippage_pair.from_asset
+    from_asset_mantissa = Decimal(str(10**from_asset.decimals))
+
+    to_asset = slippage_pair.to_asset
+    to_asset_address = to_asset.address
+    to_asset_mantissa = Decimal(str(10**to_asset.decimals))
+
+    usd_amounts = _generate_usd_amounts()
+    for usd_amount in usd_amounts:
+        log.debug(
+            f"Creating slippage slippage for: "
+            f"{slippage_pair.from_asset.symbol}-{usd_amount}"
+        )
+
+        asset_price = from_asset.price
+        asset_amount = str(int(usd_amount / asset_price * from_asset_mantissa))
+
+        quote = get_cow_quote(from_asset.address, to_asset_address, asset_amount)
+
+        slippage = (
+            Decimal(quote["buyAmount"]) / to_asset_mantissa / usd_amount * 100 - 100
+        )
+
+        if slippage > Decimal("100"):
+            continue
+
+        slippage_daily, _ = SlippageDaily.objects.get_or_create(
+            pair=slippage_pair,
+            timestamp=timestamp,
+            date=date.today(),
+            usd_amount=usd_amount,
+            source=SLIPPAGE_PAIR_SOURCE_COW,
+        )
+
+        slippage_daily.slippage_list.append(slippage)
+        slippage_daily.slippage_percent_avg = mean(slippage_daily.slippage_list)
+        slippage_daily.save()
+
+        if slippage < -80:
+            break
+
+        time.sleep(0.15)
+
+    slippage_pair.last_run = datetime.utcnow()
+    slippage_pair.save()
+
+
 def save_zerox_slippages(slippage_pair):
     timestamp = get_today_timestamp()
 
@@ -153,7 +205,7 @@ def save_zerox_slippages(slippage_pair):
     slippage_pair.save()
 
 
-def get_slippage_history(asset, source):
+def get_slippage_history(asset, source=None):
     dates = {
         "Today": None,
         "1 week ago": get_date_days_ago(number_of_days=7),
@@ -170,12 +222,10 @@ def get_slippage_history(asset, source):
     return table_data
 
 
-def get_slippage_from_asset(asset, source, for_date=None, extra_key=None):
+def get_slippage_from_asset(asset, source=None, for_date=None, extra_key=None):
     if for_date:
         slippages = (
-            SlippageDaily.objects.filter(
-                pair__from_asset=asset, source=source, date=for_date
-            )
+            SlippageDaily.objects.filter(pair__from_asset=asset, date=for_date)
             .select_related("pair", "pair__from_asset", "pair__to_asset")
             .values(
                 "usd_amount",
@@ -187,9 +237,7 @@ def get_slippage_from_asset(asset, source, for_date=None, extra_key=None):
         )
     else:
         slippages = (
-            SlippageDaily.objects.filter(
-                pair__from_asset=asset, source=source, is_active=True
-            )
+            SlippageDaily.objects.filter(pair__from_asset=asset, is_active=True)
             .select_related("pair", "pair__from_asset", "pair__to_asset")
             .values(
                 "usd_amount",
