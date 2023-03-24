@@ -37,7 +37,6 @@ def save_surplus_buffer():
 
 
 def get_liquidation_curve_for_all(type="total"):
-
     data = defaultdict(lambda: defaultdict(Decimal))
     liquidations = (
         VaultsLiquidation.objects.all()

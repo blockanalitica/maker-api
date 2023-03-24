@@ -353,7 +353,6 @@ def update_ilk_with_vaults_stats(ilk):
 
 
 def sync_vaults_with_defisaver():
-
     vaults = Vault.objects.filter(is_at_risk=True, is_active=True)
 
     for vault in vaults:
@@ -404,7 +403,10 @@ def generate_vaults_liquidation(ilk):
         )
         for type in ["all", "high", "medium", "low"]:
             if type == "all":
-                vaults = Vault.objects.filter(ilk=ilk, is_active=True,).aggregate(
+                vaults = Vault.objects.filter(
+                    ilk=ilk,
+                    is_active=True,
+                ).aggregate(
                     total_debt=Sum(
                         "debt",
                         filter=Q(

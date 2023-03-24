@@ -372,7 +372,6 @@ def fetch_aave2_balances(chain, block_number=None, dt=None):
 
 
 def fetch_aavev3_balances(chain, block_number=None, dt=None):
-
     if block_number and block_number < 16496700:
         return
 
@@ -484,7 +483,6 @@ def fetch_alchemix_balances(chain, block_number=None, dt=None):
 
 
 def fetch_euler_balances(chain, block_number=None, dt=None):
-
     if block_number and block_number < 13687582:
         return
 

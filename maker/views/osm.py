@@ -23,7 +23,6 @@ class OSMAsset(APIView):
 
 class OSMTableView(APIView):
     def get(self, request):
-
         assets = []
         symbols = (
             MakerAsset.objects.filter(
