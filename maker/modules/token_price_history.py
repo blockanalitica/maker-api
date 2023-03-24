@@ -60,7 +60,6 @@ def save_eth_rounds(chain=None):
     for rounds in chunks(all_rounds, 5000):
         rounds_data = get_price_history(token.address, rounds, chain=w3)
         for round_id, data in rounds_data.items():
-
             TokenPriceHistory.objects.get_or_create(
                 underlying_address=token.address,
                 round_id=str(round_id),
@@ -114,7 +113,6 @@ def save_exceptions_rounds(chain=None):
         for rounds in chunks(all_rounds, 5000):
             rounds_data = get_price_history(token.address, rounds, chain=w3)
             for round_id, data in rounds_data.items():
-
                 TokenPriceHistory.objects.get_or_create(
                     underlying_address=token.address,
                     round_id=str(round_id),

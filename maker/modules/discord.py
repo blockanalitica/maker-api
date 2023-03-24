@@ -19,7 +19,6 @@ from maker.utils.views import fetch_all
 def send_vaults_at_risk_alert():
     data = get_vaults_at_risk()
     if len(data["vaults"]) > 0:
-
         osm_prices = []
         for osm in data["osm_prices"]:
             osm_prices.append(

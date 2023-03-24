@@ -38,7 +38,6 @@ def run_query(sql):
 
 
 def get_protection_score_data():
-
     df_asset_price_drops = run_query(
         """
     -- daily minimum/opening price delta in the last N months (current = 18m)
@@ -191,7 +190,6 @@ def get_protection_score_data():
 
     vault_types = list(df_cr_increase_actions["ilk"].unique())
     for vault_type in vault_types:
-
         # filter all vault type's vaults
         df_cr_increase_actions_vault_type = df_cr_increase_actions[
             df_cr_increase_actions["ilk"] == vault_type
