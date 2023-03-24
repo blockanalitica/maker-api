@@ -172,7 +172,7 @@ class AssetSlippageView(APIView):
             symbol = "STETH"
         asset = get_object_or_404(Asset, underlying_symbol__iexact=symbol)
         data = []
-        for symbol, values in get_slippage_from_asset(asset, source="oneinch").items():
+        for symbol, values in get_slippage_from_asset(asset, source="cow").items():
             for key, value in values.items():
                 item = {
                     "symbol": symbol,
