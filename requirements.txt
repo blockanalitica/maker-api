@@ -144,9 +144,7 @@ eth-keys==0.3.4
 eth-retry==0.1.15
     # via multicall
 eth-rlp==0.2.1
-    # via
-    #   eth-account
-    #   web3
+    # via eth-account
 eth-typing==2.3.0
     # via
     #   eth-abi
@@ -205,7 +203,7 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-jsonschema==4.17.3
+jsonschema==3.2.0
     # via web3
 kombu==5.2.4
     # via celery
@@ -215,7 +213,7 @@ matplotlib-inline==0.1.6
     # via ipython
 multiaddr==0.0.9
     # via ipfshttpclient
-multicall==0.7.1
+multicall==0.6.2
     # via -r requirements.in
 multidict==6.0.4
     # via
@@ -349,6 +347,7 @@ six==1.16.0
     # via
     #   asttokens
     #   click-repl
+    #   jsonschema
     #   multiaddr
     #   parsimonious
     #   python-dateutil
@@ -402,7 +401,7 @@ vine==5.0.0
     #   kombu
 wcwidth==0.2.6
     # via prompt-toolkit
-web3==5.31.3
+web3==5.28.0
     # via
     #   -r requirements.in
     #   multicall
