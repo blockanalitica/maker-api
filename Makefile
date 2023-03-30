@@ -34,3 +34,20 @@ shell:
 
 notebook:
 	docker-compose run --rm web django-admin shell_plus --notebook
+
+list-api:
+	aws ecs list-tasks --cluster maker-cluster --family maker-api
+
+list-celery-beat:
+	aws ecs list-tasks --cluster maker-cluster --family maker-api-celery-beat
+
+list-celery-worker:
+	aws ecs list-tasks --cluster maker-cluster --family maker-api-celery-worker-default
+
+ecs-exec:
+	aws ecs execute-command \
+	  --region eu-west-1 \
+	  --cluster maker-cluster \
+	  --task ${task} \
+	  --command "bash" \
+	  --interactive
