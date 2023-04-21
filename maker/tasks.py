@@ -115,9 +115,9 @@ SCHEDULE = {
     "get_slippage_for_slippage_pairs": {
         "schedule": crontab(minute="15", hour="3,9,15,21"),
     },
-    "send_vaults_at_risk_alert_task": {
-        "schedule": crontab(minute="5-21/1"),
-    },
+    # "send_vaults_at_risk_alert_task": {
+    #     "schedule": crontab(minute="5-21/1"),
+    # },
     "save_vaults_liquidation_snapshot_task": {
         "schedule": crontab(minute="0", hour="*/1"),
     },
