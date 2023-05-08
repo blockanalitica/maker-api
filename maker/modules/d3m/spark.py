@@ -16,7 +16,7 @@ from .helper import get_d3m_contract_data
 def get_current_balance(balance_contract):
     chain = Blockchain()
     contract = chain.get_contract(
-        "0x028171bca77440897b824ca71d1c56cac55b68a3", abi_type="erc20"
+        "0x4dedf26112b3ec8ec46e7e31ea5e123490b05b8b", abi_type="erc20"
     )
     data = contract.caller.balanceOf(to_checksum_address(balance_contract))
     return Decimal(data) / Decimal(1e18)
