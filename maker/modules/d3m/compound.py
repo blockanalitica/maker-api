@@ -32,7 +32,9 @@ def get_current_balance(balance_contract):
     )
     data = contract.caller.balanceOf(to_checksum_address(balance_contract))
     exchange_rate = contract.caller.exchangeRateStored()
-    return (Decimal(data) / Decimal(1e8)) * (Decimal(exchange_rate) / Decimal(1e28))
+    return round(
+        (Decimal(data) / Decimal(1e8)) * (Decimal(exchange_rate) / Decimal(1e28)), 2
+    )
 
 
 def save_d3m():

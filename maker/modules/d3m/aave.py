@@ -50,7 +50,7 @@ def get_current_balance(balance_contract):
         "0x028171bca77440897b824ca71d1c56cac55b68a3", abi_type="erc20"
     )
     data = contract.caller.balanceOf(to_checksum_address(balance_contract))
-    return Decimal(data) / Decimal(1e18)
+    return round(Decimal(data) / Decimal(1e18), 2)
 
 
 def save_d3m():
