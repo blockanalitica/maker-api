@@ -49,7 +49,7 @@ def get_d3m_short_info():
         "protocol_slug": "spark",
         "balance": balance,
         "max_debt_ceiling": d3m_data.max_debt_ceiling,
-        "target_borrow_rate": d3m_data.target_borrow_rate,
+        "target_borrow_rate": 0,
         "symbol": "DAI",
         "title": "Spark",
         "utilization": utilization,
