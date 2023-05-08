@@ -19,7 +19,11 @@ class D3MsView(APIView):
 
     def get(self, request):
         stats = get_d3m_stats()
-        d3ms = [aave.get_d3m_short_info(), compound.get_d3m_short_info(), spark.get_d3m_short_info()]
+        d3ms = [
+            aave.get_d3m_short_info(),
+            compound.get_d3m_short_info(),
+            spark.get_d3m_short_info(),
+        ]
 
         data = {"results": d3ms, "stats": stats}
         return Response(data, status.HTTP_200_OK)

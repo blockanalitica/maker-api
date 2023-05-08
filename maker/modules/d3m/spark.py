@@ -54,7 +54,3 @@ def get_d3m_short_info():
         "title": "Spark",
         "utilization": utilization,
     }
-
-
-
-
