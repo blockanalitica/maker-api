@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..modules.d3m import aave, compound
+from ..modules.d3m import aave, compound, spark
 from ..modules.d3m.d3m import get_d3m_stats, get_protocol_stats
 
 
@@ -19,7 +19,7 @@ class D3MsView(APIView):
 
     def get(self, request):
         stats = get_d3m_stats()
-        d3ms = [aave.get_d3m_short_info(), compound.get_d3m_short_info()]
+        d3ms = [aave.get_d3m_short_info(), compound.get_d3m_short_info(), spark.get_d3m_short_info()]
 
         data = {"results": d3ms, "stats": stats}
         return Response(data, status.HTTP_200_OK)

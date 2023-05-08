@@ -32,7 +32,7 @@ from .models import (
 from .modules.asset import get_asset_total_supplies, save_assets_systemic_risk
 from .modules.auctions import sync_auctions
 from .modules.block import save_latest_blocks
-from .modules.d3m import aave, compound
+from .modules.d3m import aave, compound, spark
 from .modules.dai_growth import (
     sync_dai_supply_growth_periodical,
     sync_monthly_dai_supply,
@@ -305,6 +305,7 @@ def save_rates_for_protocols_task():
 def sync_d3m_task():
     aave.save_d3m()
     compound.save_d3m()
+    spark.save_d3m()
     save_surplus_buffer()
     save_overall_stats()
 
