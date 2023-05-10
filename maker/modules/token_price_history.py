@@ -294,7 +294,7 @@ def populate_eth_price_history(chain=None):
         latest_proxy_round = phase << 64 | latest_aggregator_round
         earliest_proxy_round = phase << 64 | 1
         all_rounds = [*range(earliest_proxy_round, latest_proxy_round + 1, 1)]
-        for rounds in chunks(all_rounds, 5000):
+        for rounds in chunks(all_rounds, 2500):
             rounds_data = get_price_history(token.address, rounds, chain=w3)
             for round_id, data in rounds_data.items():
                 bulk_create.append(
