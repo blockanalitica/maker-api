@@ -85,9 +85,9 @@ SCHEDULE = {
     "get_gas_task": {
         "schedule": crontab(minute="*/1"),
     },
-    # "sync_chainlink_rounds_task": {
-    #     "schedule": crontab(minute="*/1"),
-    # },
+    "sync_chainlink_rounds_task": {
+        "schedule": crontab(minute="*/1"),
+    },
     "save_latest_blocks_task": {
         "schedule": crontab(minute="*/1"),
     },
