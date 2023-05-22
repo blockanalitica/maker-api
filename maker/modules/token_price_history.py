@@ -437,7 +437,9 @@ def save_market_prices():
                 timestamp=info["timestamp"],
                 datetime=datetime.fromtimestamp(info["timestamp"]),
             )
-            Asset.objects.filter(symbol=info["symbol"].upper()).update(price=info["price"])
+            Asset.objects.filter(symbol=info["symbol"].upper()).update(
+                price=info["price"]
+            )
         except IntegrityError:
             log.debug(
                 "MarketPrice for %s and timestamp %s already exists",
