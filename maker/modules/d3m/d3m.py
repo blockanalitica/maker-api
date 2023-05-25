@@ -17,7 +17,7 @@ def get_d3m_stats():
 
     data = {
         "balance": total_balace,
-        "debt_ceiling":spark_d3m.max_debt_ceiling,
+        "debt_ceiling": spark_d3m.max_debt_ceiling,
         "surplus_buffer": surplus_buffer,
         "utilization_surplus_buffer": total_balace / surplus_buffer,
     }

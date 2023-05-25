@@ -24,12 +24,9 @@ def get_current_balance(balance_contract):
 
 def get_current_debt():
     chain = Blockchain()
-    contract = chain.get_contract(
-        "0xf705d2B7e92B3F38e6ae7afaDAA2fEE110fE5914"
-    )
+    contract = chain.get_contract("0xf705d2B7e92B3F38e6ae7afaDAA2fEE110fE5914")
     data = contract.caller.totalSupply()
     return round(Decimal(data) / Decimal(1e18), 2)
-
 
 
 def save_d3m():
