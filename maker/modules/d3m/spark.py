@@ -22,11 +22,21 @@ def get_current_balance(balance_contract):
     return round(Decimal(data) / Decimal(1e18), 2)
 
 
+def get_current_debt():
+    chain = Blockchain()
+    contract = chain.get_contract(
+        "0xf705d2B7e92B3F38e6ae7afaDAA2fEE110fE5914"
+    )
+    data = contract.caller.totalSupply()
+    return round(Decimal(data) / Decimal(1e18), 2)
+
+
+
 def save_d3m():
     ilk = "DIRECT-SPARK-DAI"
     data = get_d3m_contract_data(ilk)
     dt = datetime.now()
-    balance = get_current_balance(data["balance_contract"])
+    balance = get_current_debt()
     D3M.objects.create(
         timestamp=dt.timestamp(),
         datetime=dt,
@@ -40,17 +50,19 @@ def save_d3m():
 def get_d3m_short_info():
     d3m_data = D3M.objects.filter(protocol="spark").latest()
     balance = get_current_balance(d3m_data.balance_contract)
+    debt_balance = get_current_debt()
 
     utilization = 0
     if d3m_data.max_debt_ceiling:
-        utilization = balance / d3m_data.max_debt_ceiling
+        utilization = debt_balance / d3m_data.max_debt_ceiling
     return {
         "protocol": "SPARK",
         "protocol_slug": "spark",
-        "balance": balance,
+        "balance": debt_balance,
         "max_debt_ceiling": d3m_data.max_debt_ceiling,
         "target_borrow_rate": 0,
         "symbol": "DAI",
         "title": "Spark",
         "utilization": utilization,
+        "profit": balance - d3m_data.max_debt_ceiling,
     }
