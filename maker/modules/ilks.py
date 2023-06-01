@@ -9,9 +9,12 @@ from decimal import Decimal
 from django.db.models import Count, Sum
 from django.db.models.query_utils import Q
 from django_bulk_load import bulk_insert_models, bulk_update_models
+from eth_utils import to_bytes
 
+from maker.constants import MCD_VAT_CONTRACT_ADDRESS
 from maker.modules.osm import get_medianizer_address
 from maker.sources.defisaver import get_defisaver_chain_data, get_defisaver_vault_data
+from maker.utils.blockchain.chain import Blockchain
 from maker.utils.metrics import auto_named_statsd_timer
 
 from ..models import (
@@ -44,6 +47,8 @@ def save_ilks():
             collateral_type = "psm"
         elif collateral["is_uni_v2"] or "CRVV1" in ilk or "GUNI" in ilk:
             collateral_type = "lp"
+        elif ilk == "RWA014-A":
+            collateral_type="psm"
         elif collateral["is_rwa"] or ilk.startswith("RWA"):
             collateral_type = "rwa"
         elif collateral["is_sc"]:
@@ -60,10 +65,13 @@ def save_ilks():
             symbol = ilk.split("-")[1]
             if symbol == "PAX":
                 symbol = "USDP"
+            elif collateral["ilk"] == "RWA014-A":
+                symbol = "USDC"
         elif collateral["ilk"] == "DIRECT-AAVEV2-DAI":
             symbol = "AAVE"
         elif collateral["ilk"] == "DIRECT-COMPV2-DAI":
             symbol = "COMP"
+
         else:
             symbol = ilk.split("-")[0]
 
@@ -75,12 +83,23 @@ def save_ilks():
         if collateral_type == "lp" and is_stable:
             collateral_type = "lp-stable"
 
+        dc_iam_line = collateral["dc_iam_line"]
+        debt = collateral["dai"]
+        if collateral["ilk"] == "RWA014-A":
+            chain = Blockchain()
+            contract = chain.get_contract(MCD_VAT_CONTRACT_ADDRESS)
+            data = contract.functions.ilks(to_bytes(text=ilk)).call(
+                    block_identifier="latest"
+                )
+            debt = Decimal(data[0]) / 10**18
+            dc_iam_line = Decimal(data[3]) / 10**45
+
         ilk_data = {
             "name": name,
             "collateral": symbol,
-            "dai_debt": collateral["dai"],
+            "dai_debt": debt,
             "debt_ceiling": collateral["cap_temp"],
-            "dc_iam_line": collateral["dc_iam_line"],
+            "dc_iam_line": dc_iam_line,
             "dc_iam_gap": collateral["dc_iam_gap"],
             "dc_iam_ttl": collateral["dc_iam_ttl"],
             "lr": collateral["liq_ratio"],

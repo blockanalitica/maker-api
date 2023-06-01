@@ -59,7 +59,10 @@ from .modules.ohlcv import (
 )
 from .modules.osm import save_medianizer_prices, save_osm_daily, save_osm_for_asset
 from .modules.pool import save_pool_info
-from .modules.psm import claculate_and_save_psm_dai_supply
+from .modules.psm import (
+    calculate_and_save_psm_dai_supply_for_rwa,
+    claculate_and_save_psm_dai_supply,
+)
 from .modules.risk import save_overall_stats, save_surplus_buffer
 from .modules.risk_premium import compute_all_vault_types
 from .modules.slippage import save_cow_slippages
@@ -308,6 +311,7 @@ def sync_d3m_task():
     spark.save_d3m()
     save_surplus_buffer()
     save_overall_stats()
+    calculate_and_save_psm_dai_supply_for_rwa()
 
 
 @app.task
