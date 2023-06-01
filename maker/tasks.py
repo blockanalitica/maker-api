@@ -314,7 +314,6 @@ def sync_d3m_task():
     save_overall_stats()
 
 
-
 @app.task
 def check_to_sync_vaults():
     block_number = get_last_block_for_vaults()

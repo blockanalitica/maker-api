@@ -48,7 +48,7 @@ def save_ilks():
         elif collateral["is_uni_v2"] or "CRVV1" in ilk or "GUNI" in ilk:
             collateral_type = "lp"
         elif ilk == "RWA014-A":
-            collateral_type="psm"
+            collateral_type = "psm"
         elif collateral["is_rwa"] or ilk.startswith("RWA"):
             collateral_type = "rwa"
         elif collateral["is_sc"]:
@@ -89,8 +89,8 @@ def save_ilks():
             chain = Blockchain()
             contract = chain.get_contract(MCD_VAT_CONTRACT_ADDRESS)
             data = contract.functions.ilks(to_bytes(text=ilk)).call(
-                    block_identifier="latest"
-                )
+                block_identifier="latest"
+            )
             debt = Decimal(data[0]) / 10**18
             dc_iam_line = Decimal(data[3]) / 10**45
 
