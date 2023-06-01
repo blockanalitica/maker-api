@@ -267,6 +267,7 @@ def sync_pool_task(pool_id):
 @app.task
 def claculate_and_save_psm_dai_supply_task():
     claculate_and_save_psm_dai_supply()
+    calculate_and_save_psm_dai_supply_for_rwa()
 
 
 #######################
@@ -311,7 +312,7 @@ def sync_d3m_task():
     spark.save_d3m()
     save_surplus_buffer()
     save_overall_stats()
-    calculate_and_save_psm_dai_supply_for_rwa()
+
 
 
 @app.task

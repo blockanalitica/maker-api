@@ -71,7 +71,7 @@ def calculate_and_save_psm_dai_supply_for_rwa(block_number="latest"):
     ilk = Ilk.objects.get(ilk="RWA014-A")
 
     if block_number == "latest":
-        current_hour = datetime.now().replace(minute=0, second=0, microsecond=0)
+        current_hour = datetime.now().replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
     else:
         block = Block.objects.filter(block_number__lte=block_number).latest()
         current_hour = block.datetime.replace(minute=0, second=0, microsecond=0)
