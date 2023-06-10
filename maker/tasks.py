@@ -26,7 +26,6 @@ from .models import (
     Pool,
     SlippageDaily,
     SlippagePair,
-    Vault,
     Volatility,
 )
 from .modules.asset import get_asset_total_supplies, save_assets_systemic_risk
@@ -74,7 +73,6 @@ from .modules.vaults_at_risk import (
     refresh_vaults_at_risk,
 )
 from .sources.blocknative import fetch_gas_prices
-from .sources.dicu import get_last_block_for_vaults
 from .sources.maker_chain import sync_lr_for_ilk, sync_stability_fee_for_ilk
 from .utils.utils import yesterday_date
 
