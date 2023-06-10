@@ -354,11 +354,12 @@ def create_or_update_vaults(ilk):
             update_field_names=updated_fields,
             pk_field_names=["uid", "ilk"],
         )
-    get_defisaver_chain_data(ilk)
+
     if ilk_obj.type in ["asset", "lp"]:
         generate_vaults_liquidation(ilk)
     update_ilk_with_vaults_stats(ilk)
     save_last_activity(ilk)
+    get_defisaver_chain_data(ilk)
 
 
 def update_ilk_with_vaults_stats(ilk):

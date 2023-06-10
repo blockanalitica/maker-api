@@ -95,7 +95,7 @@ SCHEDULE = {
         "schedule": crontab(minute="*/1"),
     },
     "check_to_sync_vaults": {
-        "schedule": crontab(minute="*/2"),
+        "schedule": crontab(minute="*/10"),
     },
     "update_vaults_market_price": {
         "schedule": crontab(minute="*/2"),
@@ -316,12 +316,12 @@ def sync_d3m_task():
 
 @app.task
 def check_to_sync_vaults():
-    block_number = get_last_block_for_vaults()
-    if not block_number:
-        return
-    if Vault.objects.filter(block_number=block_number).count() > 0:
-        log.info("Skiping sync_vaults for block_number %s", block_number)
-        return
+    # block_number = get_last_block_for_vaults()
+    # if not block_number:
+    #     return
+    # if Vault.objects.filter(block_number=block_number).count() > 0:
+    #     log.info("Skiping sync_vaults for block_number %s", block_number)
+    #     return
     sync_vaults_task.delay()
     sync_auctions_task.delay()
 
