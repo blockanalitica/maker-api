@@ -185,9 +185,6 @@ class PSMsView(APIView):
             .order_by("-dai_debt")
         )
 
-        print(data)
-
-
         stats = {
             "debt": Decimal("0"),
             "dc": Decimal("0"),
