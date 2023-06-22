@@ -93,6 +93,8 @@ def save_ilks():
             )
             debt = Decimal(data[0]) / 10**18
             dc_iam_line = Decimal(data[3]) / 10**45
+        if collateral["ilk"] == "PSM-PAX-A":
+            dc_iam_line = 0
 
         ilk_data = {
             "name": name,
