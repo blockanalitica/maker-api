@@ -473,6 +473,46 @@ def fetch_comp_v3_balances(chain, block_number=None, dt=None):
     _save_balance(balance / 10**8, "WBTC", protocol, dt)
 
 
+
+def fetch_spark_balances(chain, block_number=None, dt=None):
+    if block_number and block_number < 15331586:
+        return
+
+    protocol = "spark"
+
+    wallets = [
+        "0x59cD1C87501baa753d0B5B5Ab5D8416A45cD71DB",
+    ]
+    balance = Decimal("0")
+    for wallet_address in wallets:
+        balance += chain.get_balance_of(
+            WETH_TOKEN_ADDRESS, wallet_address, block_number
+        )
+    _save_balance(convert_wei_to_decimal(balance), "WETH", protocol, dt)
+
+    try:
+        balance = chain.get_balance_of(
+            "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "0x12B54025C112Aa61fAce2CDB7118740875A566E9",
+            block_number,
+        )
+        _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
+    except (BadFunctionCallOutput, ContractLogicError):
+        pass
+
+
+    try:
+        balance = chain.get_balance_of(
+            "0xae78736cd615f374d3085123a210448e74fc6393",
+            "0x9985dF20D7e9103ECBCeb16a84956434B6f06ae8",
+            block_number,
+        )
+        _save_balance(convert_wei_to_decimal(balance), "rETH", protocol, dt)
+    except (BadFunctionCallOutput, ContractLogicError):
+        pass
+
+
+
 def fetch_alchemix_balances(chain, block_number=None, dt=None):
     protocol = "alchemix"
 
