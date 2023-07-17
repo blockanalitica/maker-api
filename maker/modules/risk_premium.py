@@ -296,16 +296,9 @@ def compute_scenario_params_psweep(jump_frequency, jump_severity, keeper_profit)
 
 def _get_slippage_for_vault_asset(ilk):
     vault_asset = VAULT_TYPE_TO_VAULT_ASSET_MAPPER[ilk]
-    for_date = (
-        SlippageDaily.objects.filter(pair__from_asset__symbol=vault_asset)
-        .only("date")
-        .latest()
-        .date
-    )
     slippages = (
         SlippageDaily.objects.filter(
-            pair__from_asset__symbol=vault_asset,
-            date=for_date,
+            pair__from_asset__symbol=vault_asset, is_active=True
         )
         .values(
             "usd_amount",
@@ -631,12 +624,16 @@ def compute_all_vault_types():
         stats = get_stats_for_ilk(ilk)
         dt_7 = date.today() - timedelta(days=7)
         dt_30 = date.today() - timedelta(days=30)
-        avgs_7d = RiskPremium.objects.filter(datetime__date__gte=dt_7).aggregate(
+        avgs_7d = RiskPremium.objects.filter(
+            datetime__date__gte=dt_7, datetime__date__lte=date.today()
+        ).aggregate(
             debt_ceiling=Avg("debt_ceiling"),
             capital_at_risk=Avg("capital_at_risk"),
             risk_premium=Avg("risk_premium"),
         )
-        avgs_30d = RiskPremium.objects.filter(datetime__date__gte=dt_30).aggregate(
+        avgs_30d = RiskPremium.objects.filter(
+            datetime__date__gte=dt_30, datetime__date__lte=date.today()
+        ).aggregate(
             debt_ceiling=Avg("debt_ceiling"),
             capital_at_risk=Avg("capital_at_risk"),
             risk_premium=Avg("risk_premium"),
