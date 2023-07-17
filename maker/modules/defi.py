@@ -473,7 +473,6 @@ def fetch_comp_v3_balances(chain, block_number=None, dt=None):
     _save_balance(balance / 10**8, "WBTC", protocol, dt)
 
 
-
 def fetch_spark_balances(chain, block_number=None, dt=None):
     if block_number and block_number < 15331586:
         return
@@ -500,7 +499,6 @@ def fetch_spark_balances(chain, block_number=None, dt=None):
     except (BadFunctionCallOutput, ContractLogicError):
         pass
 
-
     try:
         balance = chain.get_balance_of(
             "0xae78736cd615f374d3085123a210448e74fc6393",
@@ -510,7 +508,6 @@ def fetch_spark_balances(chain, block_number=None, dt=None):
         _save_balance(convert_wei_to_decimal(balance), "rETH", protocol, dt)
     except (BadFunctionCallOutput, ContractLogicError):
         pass
-
 
 
 def fetch_alchemix_balances(chain, block_number=None, dt=None):
