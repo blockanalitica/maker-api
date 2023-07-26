@@ -403,10 +403,7 @@ def generate_vaults_liquidation(ilk):
         )
         for type in ["all", "high", "medium", "low"]:
             if type == "all":
-                vaults = Vault.objects.filter(
-                    ilk=ilk,
-                    is_active=True,
-                ).aggregate(
+                vaults = Vault.objects.filter(ilk=ilk, is_active=True,).aggregate(
                     total_debt=Sum(
                         "debt",
                         filter=Q(

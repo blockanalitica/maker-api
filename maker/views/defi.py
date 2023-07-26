@@ -11,6 +11,8 @@ from rest_framework.views import APIView
 from maker.models import DEFILocked
 
 from ..modules.defi import get_current_rates, get_rates
+from collections import defaultdict
+from decimal import Decimal
 
 
 class RatesView(APIView):
@@ -45,5 +47,40 @@ class DEFILockedView(APIView):
         )
         return Response(
             {"results": locked},
+            status.HTTP_200_OK,
+        )
+
+
+class ETHMarketShareView(APIView):
+    def get(self, request):
+        eth_correlated = ["stETH", "wstETH", "WETH", "ETH", "rETH"]
+        data = defaultdict(Decimal)
+        for protocol in (
+            DEFILocked.objects.filter(underlying_symbol__in=eth_correlated)
+            .exclude(protocol="euler")
+            .order_by("protocol")
+            .distinct("protocol")
+            .values_list("protocol", flat=True)
+        ):
+            for symbol in eth_correlated:
+                try:
+                    token_balance = (
+                        DEFILocked.objects.filter(
+                            protocol=protocol, underlying_symbol=symbol
+                        )
+                        .latest()
+                        .balance
+                    )
+                except DEFILocked.DoesNotExist:
+                    token_balance = 0
+                protocol_key = protocol
+                if "aave" in protocol:
+                    protocol_key = "aave"
+                if "compound" in protocol:
+                    protocol_key = "compound"
+                data[protocol_key] += token_balance
+        results = [{"protocol": k, "balance": v} for k, v in data.items()]
+        return Response(
+            {"results": results},
             status.HTTP_200_OK,
         )

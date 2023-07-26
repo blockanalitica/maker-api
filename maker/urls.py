@@ -49,7 +49,7 @@ from .views.dai_trades import (
     DAITradesVolumePerExchangeView,
     DAITradesVolumeView,
 )
-from .views.defi import DEFILockedView, RatesView
+from .views.defi import DEFILockedView, RatesView, ETHMarketShareView
 from .views.forum import ForumArchiveView
 from .views.ilk import (
     IlkCapitalAtRiskChartView,
@@ -471,6 +471,11 @@ urlpatterns = [
         "rates/",
         RatesView.as_view(),
         name="rates",
+    ),
+    path(
+        "defi/eth-market-share/",
+        ETHMarketShareView.as_view(),
+        name="eth-market-share",
     ),
     path(
         "defi/tvl/<str:symbol>/",

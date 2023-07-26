@@ -93,6 +93,27 @@ class Blockchain:
         )
         return Decimal(balance)
 
+    def get_wsteth_balance_of(self, wallet_address, block_number=None):
+        """
+        Helper function for converting wsteth to steth
+        """
+        if not block_number:
+            block_number = "latest"
+
+        token_address = Web3.toChecksumAddress(
+            "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"
+        )
+        wallet_address = Web3.toChecksumAddress(wallet_address)
+        contract = self.get_contract(token_address, abi_type="wstETH")
+
+        wsteth_balance = contract.functions.balanceOf(wallet_address).call(
+            block_identifier=block_number
+        )
+        balance = contract.functions.getStETHByWstETH(wsteth_balance).call(
+            block_identifier=block_number
+        )
+        return Decimal(balance)
+
     def get_total_supply(self, token_address):
         """
         Helper function for getting total supply of a token.

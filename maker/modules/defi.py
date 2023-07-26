@@ -322,8 +322,7 @@ def fetch_maker_balances(chain, block_number=None, dt=None):
         ]
         balance = Decimal("0")
         for wallet_address in wallets:
-            balance += chain.get_balance_of(
-                "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            balance += chain.get_wsteth_balance_of(
                 wallet_address,
                 block_number,
             )
@@ -393,8 +392,7 @@ def fetch_aavev3_balances(chain, block_number=None, dt=None):
     _save_balance(convert_wei_to_decimal(balance), "DAI", protocol, dt)
 
     try:
-        balance = chain.get_balance_of(
-            "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        balance = chain.get_wsteth_balance_of(
             "0x0b925ed163218f6662a35e0f0371ac234f9e9371",
             block_number,
         )
@@ -456,8 +454,7 @@ def fetch_comp_v3_balances(chain, block_number=None, dt=None):
     _save_balance(convert_wei_to_decimal(balance), "WETH", protocol, dt)
 
     try:
-        balance = chain.get_balance_of(
-            "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        balance = chain.get_wsteth_balance_of(
             "0xA17581A9E3356d9A858b789D68B4d866e593aE94",
             block_number,
         )
@@ -471,7 +468,6 @@ def fetch_comp_v3_balances(chain, block_number=None, dt=None):
         block_number,
     )
     _save_balance(balance / 10**8, "WBTC", protocol, dt)
-
 
 
 def fetch_spark_balances(chain, block_number=None, dt=None):
@@ -491,15 +487,13 @@ def fetch_spark_balances(chain, block_number=None, dt=None):
     _save_balance(convert_wei_to_decimal(balance), "WETH", protocol, dt)
 
     try:
-        balance = chain.get_balance_of(
-            "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        balance = chain.get_wsteth_balance_of(
             "0x12B54025C112Aa61fAce2CDB7118740875A566E9",
             block_number,
         )
         _save_balance(convert_wei_to_decimal(balance), "stETH", protocol, dt)
     except (BadFunctionCallOutput, ContractLogicError):
         pass
-
 
     try:
         balance = chain.get_balance_of(
@@ -510,7 +504,6 @@ def fetch_spark_balances(chain, block_number=None, dt=None):
         _save_balance(convert_wei_to_decimal(balance), "rETH", protocol, dt)
     except (BadFunctionCallOutput, ContractLogicError):
         pass
-
 
 
 def fetch_alchemix_balances(chain, block_number=None, dt=None):
@@ -544,8 +537,7 @@ def fetch_euler_balances(chain, block_number=None, dt=None):
     _save_balance(convert_wei_to_decimal(balance), "DAI", protocol, dt)
 
     try:
-        balance = chain.get_balance_of(
-            "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        balance = chain.get_wsteth_balance_of(
             "0x27182842e098f60e3d576794a5bffb0777e025d3",
             block_number,
         )
@@ -563,6 +555,7 @@ def fetch_defi_balance():
     fetch_comp_v3_balances(chain)
     fetch_alchemix_balances(chain)
     fetch_euler_balances(chain)
+    fetch_spark_balances(chain)
 
 
 def backpopulate_defi_balance(blocks):
@@ -576,6 +569,7 @@ def backpopulate_defi_balance(blocks):
         fetch_comp_balances(chain, data["block_number"], data["dt"])
         fetch_comp_v3_balances(chain, data["block_number"], data["dt"])
         fetch_alchemix_balances(chain, data["block_number"], data["dt"])
+        fetch_spark_balances(chain, data["block_number"], data["dt"])
 
 
 def run_query(uri, query, statusCode=200):
