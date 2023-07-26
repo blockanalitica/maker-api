@@ -2,7 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from collections import defaultdict
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -11,8 +13,6 @@ from rest_framework.views import APIView
 from maker.models import DEFILocked
 
 from ..modules.defi import get_current_rates, get_rates
-from collections import defaultdict
-from decimal import Decimal
 
 
 class RatesView(APIView):

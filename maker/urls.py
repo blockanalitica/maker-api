@@ -49,7 +49,7 @@ from .views.dai_trades import (
     DAITradesVolumePerExchangeView,
     DAITradesVolumeView,
 )
-from .views.defi import DEFILockedView, RatesView, ETHMarketShareView
+from .views.defi import DEFILockedView, ETHMarketShareView, RatesView
 from .views.forum import ForumArchiveView
 from .views.ilk import (
     IlkCapitalAtRiskChartView,
