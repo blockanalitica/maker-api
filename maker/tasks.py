@@ -26,7 +26,6 @@ from .models import (
     Pool,
     SlippageDaily,
     SlippagePair,
-    Vault,
     Volatility,
 )
 from .modules.asset import get_asset_total_supplies, save_assets_systemic_risk
@@ -59,7 +58,10 @@ from .modules.ohlcv import (
 )
 from .modules.osm import save_medianizer_prices, save_osm_daily, save_osm_for_asset
 from .modules.pool import save_pool_info
-from .modules.psm import claculate_and_save_psm_dai_supply
+from .modules.psm import (
+    calculate_and_save_psm_dai_supply_for_rwa,
+    claculate_and_save_psm_dai_supply,
+)
 from .modules.risk import save_overall_stats, save_surplus_buffer
 from .modules.risk_premium import compute_all_vault_types
 from .modules.slippage import save_cow_slippages
@@ -71,7 +73,6 @@ from .modules.vaults_at_risk import (
     refresh_vaults_at_risk,
 )
 from .sources.blocknative import fetch_gas_prices
-from .sources.dicu import get_last_block_for_vaults
 from .sources.maker_chain import sync_lr_for_ilk, sync_stability_fee_for_ilk
 from .utils.utils import yesterday_date
 
@@ -92,7 +93,7 @@ SCHEDULE = {
         "schedule": crontab(minute="*/1"),
     },
     "check_to_sync_vaults": {
-        "schedule": crontab(minute="*/2"),
+        "schedule": crontab(minute="*/10"),
     },
     "update_vaults_market_price": {
         "schedule": crontab(minute="*/2"),
@@ -264,6 +265,7 @@ def sync_pool_task(pool_id):
 @app.task
 def claculate_and_save_psm_dai_supply_task():
     claculate_and_save_psm_dai_supply()
+    calculate_and_save_psm_dai_supply_for_rwa()
 
 
 #######################
@@ -312,12 +314,12 @@ def sync_d3m_task():
 
 @app.task
 def check_to_sync_vaults():
-    block_number = get_last_block_for_vaults()
-    if not block_number:
-        return
-    if Vault.objects.filter(block_number=block_number).count() > 0:
-        log.info("Skiping sync_vaults for block_number %s", block_number)
-        return
+    # block_number = get_last_block_for_vaults()
+    # if not block_number:
+    #     return
+    # if Vault.objects.filter(block_number=block_number).count() > 0:
+    #     log.info("Skiping sync_vaults for block_number %s", block_number)
+    #     return
     sync_vaults_task.delay()
     sync_auctions_task.delay()
 

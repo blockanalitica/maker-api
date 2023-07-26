@@ -6,13 +6,20 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.db import connection
+from eth_utils import to_bytes
 
-from maker.models import Ilk, PSMDAISupply
+from maker.constants import MCD_VAT_CONTRACT_ADDRESS
+from maker.models import Block, Ilk, PSMDAISupply
+from maker.utils.blockchain.chain import Blockchain
 from maker.utils.views import fetch_all
 
 
 def claculate_and_save_psm_dai_supply():
-    ilks = Ilk.objects.filter(type="psm", is_active=True).values_list("ilk", flat=True)
+    ilks = (
+        Ilk.objects.filter(type="psm", is_active=True)
+        .exclude(ilk="RWA014-A")
+        .values_list("ilk", flat=True)
+    )
 
     for ilk in ilks:
         current_hour = datetime.now().replace(minute=0, second=0, microsecond=0)
@@ -62,3 +69,36 @@ def claculate_and_save_psm_dai_supply():
 
         if len(bulk_create) > 0:
             PSMDAISupply.objects.bulk_create(bulk_create)
+
+
+def calculate_and_save_psm_dai_supply_for_rwa(block_number="latest"):
+    ilk = Ilk.objects.get(ilk="RWA014-A")
+
+    if block_number == "latest":
+        current_hour = datetime.now().replace(
+            minute=0, second=0, microsecond=0
+        ) + timedelta(hours=1)
+    else:
+        block = Block.objects.filter(block_number__lte=block_number).latest()
+        current_hour = block.datetime.replace(minute=0, second=0, microsecond=0)
+    try:
+        latest = PSMDAISupply.objects.filter(ilk=ilk.ilk).latest()
+        old_supply = latest.total_supply
+    except PSMDAISupply.DoesNotExist:
+        old_supply = Decimal("0")
+
+    chain = Blockchain()
+    contract = chain.get_contract(MCD_VAT_CONTRACT_ADDRESS)
+    data = contract.functions.ilks(to_bytes(text=ilk.ilk)).call(
+        block_identifier=block_number
+    )
+    total_supply = Decimal(data[0]) / 10**18
+
+    PSMDAISupply.objects.update_or_create(
+        ilk=ilk,
+        datetime=current_hour,
+        timestamp=current_hour.timestamp(),
+        defaults=dict(
+            total_supply=total_supply, supply_change=total_supply - old_supply
+        ),
+    )

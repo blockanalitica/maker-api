@@ -8,7 +8,7 @@ from decimal import Decimal
 
 import serpy
 from django.db import connection
-from django.db.models import F, Sum, Value
+from django.db.models import Case, F, FloatField, Sum, Value, When
 from django.db.models.functions import TruncHour
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -165,7 +165,11 @@ class PSMsView(APIView):
             Ilk.objects.filter(type="psm")
             .annotate(
                 share=F("dai_debt") / Value(total_debt),
-                utilization=F("dai_debt") / F("dc_iam_line"),
+                utilization=Case(
+                    When(dc_iam_line=0, then=Value(0)),
+                    default=F("dai_debt") / F("dc_iam_line"),
+                    output_field=FloatField(),
+                ),
             )
             .values(
                 "ilk",

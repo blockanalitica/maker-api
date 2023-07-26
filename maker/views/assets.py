@@ -26,12 +26,12 @@ from maker.models import (
     MakerAsset,
     MakerAssetCollateral,
     MakerAssetDebt,
+    MarketPrice,
     Medianizer,
     OHLCVPair,
     OSMDaily,
     PoolInfo,
     SlippageDaily,
-    TokenPriceHistory,
     Vault,
     Volatility,
 )
@@ -54,14 +54,7 @@ class AssetPricesView(APIView):
         data = {}
 
         days_ago = int(request.GET.get("days_ago"))
-        try:
-            mkt_price = (
-                TokenPriceHistory.objects.filter(underlying_address=asset.address)
-                .latest()
-                .price
-            )
-        except TokenPriceHistory.DoesNotExist:
-            mkt_price = None
+        mkt_price = asset.price
 
         try:
             medianizer_price = Medianizer.objects.filter(symbol=symbol).latest().price
@@ -80,13 +73,13 @@ class AssetPricesView(APIView):
 
             try:
                 mkt_before_price = (
-                    TokenPriceHistory.objects.filter(
-                        underlying_address=asset.address, timestamp__lte=timestamp
+                    MarketPrice.objects.filter(
+                        symbol=asset.symbol, timestamp__lte=timestamp
                     )
                     .latest()
                     .price
                 )
-            except TokenPriceHistory.DoesNotExist:
+            except MarketPrice.DoesNotExist:
                 pass
             else:
                 mkt_price_diff = (mkt_price - mkt_before_price) / mkt_before_price * 100
