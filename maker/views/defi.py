@@ -2,8 +2,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from collections import defaultdict
 from datetime import datetime, timedelta
+from decimal import Decimal
 
+from django.db.models.functions import TruncDay
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -45,5 +48,73 @@ class DEFILockedView(APIView):
         )
         return Response(
             {"results": locked},
+            status.HTTP_200_OK,
+        )
+
+
+class ETHMarketShareView(APIView):
+    def get(self, request):
+        eth_correlated = ["stETH", "wstETH", "WETH", "ETH", "rETH"]
+        data = defaultdict(Decimal)
+        for protocol in (
+            DEFILocked.objects.filter(underlying_symbol__in=eth_correlated)
+            .exclude(protocol="euler")
+            .order_by("protocol")
+            .distinct("protocol")
+            .values_list("protocol", flat=True)
+        ):
+            for symbol in eth_correlated:
+                try:
+                    token_balance = (
+                        DEFILocked.objects.filter(
+                            protocol=protocol, underlying_symbol=symbol
+                        )
+                        .latest()
+                        .balance
+                    )
+                except DEFILocked.DoesNotExist:
+                    token_balance = 0
+                protocol_key = protocol
+                if "aave" in protocol:
+                    protocol_key = "aave"
+                if "compound" in protocol:
+                    protocol_key = "compound"
+                data[protocol_key] += token_balance
+        results = [{"protocol": k, "balance": v} for k, v in data.items()]
+        return Response(
+            {"results": results},
+            status.HTTP_200_OK,
+        )
+
+
+class ETHMarketShareHistoricView(APIView):
+    def get(self, request):
+        eth_correlated = ["stETH", "wstETH", "WETH", "ETH", "rETH"]
+        days_ago = int(request.GET.get("days_ago", 7))
+        data = defaultdict(lambda: defaultdict(Decimal))
+        d = (datetime.now() - timedelta(days=days_ago)).date()
+        entries = (
+            DEFILocked.objects.annotate(dt=TruncDay("datetime"))
+            .filter(underlying_symbol__in=eth_correlated, date__gte=d)
+            .exclude(protocol="euler")
+            .order_by("protocol", "date", "underlying_symbol")
+            .distinct("protocol", "date", "underlying_symbol")
+            .values("protocol", "date", "balance", "underlying_symbol")
+        )
+        for entry in entries:
+            protocol_key = entry["protocol"]
+            if "aave" in protocol_key:
+                protocol_key = "aave"
+            if "compound" in protocol_key:
+                protocol_key = "compound"
+            data[entry["date"]][protocol_key] += entry["balance"]
+
+        results = []
+
+        for date, values in data.items():
+            for protocol, balance in values.items():
+                results.append({"dt": date, "protocol": protocol, "balance": balance})
+        return Response(
+            {"results": results},
             status.HTTP_200_OK,
         )
