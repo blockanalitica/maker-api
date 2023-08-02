@@ -134,7 +134,10 @@ class ETHMarketShareRouterView(APIView):
 class ETHMarketShareHistoricRouterView(APIView):
     def get(self, request):
         days_ago = int(request.GET.get("days_ago", 7))
-        url = f"https://makerdao-fyi-api.blockanalitica.com/v1/defi/eth-captured-historic/?days_ago={days_ago}"
+        url = (
+            "https://makerdao-fyi-api.blockanalitica.com/v1/defi/eth-captured-historic/"
+        )
+        url += f"?days_ago={days_ago}"
         data = retry_get_json(url)
         return Response(
             {"results": data},
