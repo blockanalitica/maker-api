@@ -51,7 +51,9 @@ from .views.dai_trades import (
 )
 from .views.defi import (
     DEFILockedView,
+    ETHMarketShareHistoricRouterView,
     ETHMarketShareHistoricView,
+    ETHMarketShareRouterView,
     ETHMarketShareView,
     RatesView,
 )
@@ -486,6 +488,16 @@ urlpatterns = [
         "defi/eth-market-share-historic/",
         ETHMarketShareHistoricView.as_view(),
         name="eth-market-share-historic",
+    ),
+    path(
+        "defi/eth-market-share-router/",
+        ETHMarketShareRouterView.as_view(),
+        name="eth-market-share-router",
+    ),
+    path(
+        "defi/eth-market-share-historic-router/",
+        ETHMarketShareHistoricRouterView.as_view(),
+        name="eth-market-share-historic-router",
     ),
     path(
         "defi/tvl/<str:symbol>/",
