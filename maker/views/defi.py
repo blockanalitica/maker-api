@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from maker.models import DEFILocked
-
+from maker.utils.http import retry_get_json
 from ..modules.defi import get_current_rates, get_rates
 
 
@@ -116,5 +116,26 @@ class ETHMarketShareHistoricView(APIView):
                 results.append({"dt": date, "protocol": protocol, "balance": balance})
         return Response(
             {"results": results},
+            status.HTTP_200_OK,
+        )
+
+
+class ETHMarketShareRouterView(APIView):
+    def get(self, request):
+        url = "https://makerdao-fyi-api.blockanalitica.com/v1/defi/eth-captured/"
+        data = retry_get_json(url)
+        return Response(
+            {"results": data},
+            status.HTTP_200_OK,
+        )
+
+
+class ETHMarketShareHistoricRouterView(APIView):
+    def get(self, request):
+        days_ago = int(request.GET.get("days_ago", 7))
+        url = f"https://makerdao-fyi-api.blockanalitica.com/v1/defi/eth-captured-historic/?days_ago={days_ago}"
+        data = retry_get_json(url)
+        return Response(
+            {"results": data},
             status.HTTP_200_OK,
         )

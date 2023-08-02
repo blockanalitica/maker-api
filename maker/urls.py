@@ -54,6 +54,8 @@ from .views.defi import (
     ETHMarketShareHistoricView,
     ETHMarketShareView,
     RatesView,
+    ETHMarketShareRouterView,
+    ETHMarketShareHistoricRouterView,
 )
 from .views.forum import ForumArchiveView
 from .views.ilk import (
@@ -486,6 +488,16 @@ urlpatterns = [
         "defi/eth-market-share-historic/",
         ETHMarketShareHistoricView.as_view(),
         name="eth-market-share-historic",
+    ),
+    path(
+        "defi/eth-market-share-router/",
+        ETHMarketShareRouterView.as_view(),
+        name="eth-market-share-router",
+    ),
+    path(
+        "defi/eth-market-share-historic-router/",
+        ETHMarketShareHistoricRouterView.as_view(),
+        name="eth-market-share-historic-router",
     ),
     path(
         "defi/tvl/<str:symbol>/",
