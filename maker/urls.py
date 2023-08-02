@@ -51,11 +51,11 @@ from .views.dai_trades import (
 )
 from .views.defi import (
     DEFILockedView,
+    ETHMarketShareHistoricRouterView,
     ETHMarketShareHistoricView,
+    ETHMarketShareRouterView,
     ETHMarketShareView,
     RatesView,
-    ETHMarketShareRouterView,
-    ETHMarketShareHistoricRouterView,
 )
 from .views.forum import ForumArchiveView
 from .views.ilk import (

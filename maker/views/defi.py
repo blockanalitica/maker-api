@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 
 from maker.models import DEFILocked
 from maker.utils.http import retry_get_json
+
 from ..modules.defi import get_current_rates, get_rates
 
 
