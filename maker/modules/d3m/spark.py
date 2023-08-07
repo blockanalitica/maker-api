@@ -9,6 +9,7 @@ from eth_utils import to_checksum_address
 
 from maker.models import D3M
 from maker.utils.blockchain.chain import Blockchain
+from maker.utils.http import retry_get_json
 
 from .helper import get_d3m_contract_data
 
@@ -44,14 +45,20 @@ def save_d3m():
     )
 
 
+def get_d3m_earnings():
+    url = "https://spark-api.blockanalitica.com/v1/ethereum/treasury/ddm-earnings/"
+    data = retry_get_json(url)
+
+    return data["earnings"]
+
+
 def get_d3m_short_info():
     d3m_data = D3M.objects.filter(protocol="spark").latest()
-    balance = get_current_balance(d3m_data.balance_contract)
     debt_balance = get_current_debt()
-
     utilization = 0
     if d3m_data.max_debt_ceiling:
         utilization = debt_balance / d3m_data.max_debt_ceiling
+    earnings = get_d3m_earnings()
     return {
         "protocol": "SPARK",
         "protocol_slug": "spark",
@@ -61,5 +68,5 @@ def get_d3m_short_info():
         "symbol": "DAI",
         "title": "Spark",
         "utilization": utilization,
-        "profit": balance - d3m_data.max_debt_ceiling,
+        "profit": earnings,
     }
