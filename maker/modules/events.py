@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from django_bulk_load import bulk_insert_models, bulk_update_models
 
+from maker.modules.vaults import save_vault_changes
 from maker.utils.metrics import auto_named_statsd_timer
 from maker.utils.utils import calculate_rate
 
@@ -131,6 +132,7 @@ def sync_vault_event_states():
         block_number = 0
     bulk_create = []
     bulk_update_vault = []
+    vaults = []
     uids = (
         RawEvent.objects.filter(block_number__gt=block_number)
         .order_by("vault_uid")
@@ -142,6 +144,7 @@ def sync_vault_event_states():
         bulk_create.extend(event_states)
         event = RawEvent.objects.filter(vault_uid=uid).latest()
         bulk_update_vault.append(Vault(uid=uid, last_activity=event.datetime))
+        vaults.append({"vault_uid": uid, "ilk": event.ilk})
     if bulk_create:
         bulk_insert_models(bulk_create, ignore_conflicts=True)
     if bulk_update_vault:
@@ -153,6 +156,12 @@ def sync_vault_event_states():
             pk_field_names=["uid"],
         )
     sync_vault_event_balances(block_number)
+    if vaults:
+        for vault_data in vaults:
+            print(vault_data)
+            save_vault_changes(vault_data, 1)
+            save_vault_changes(vault_data, 7)
+            save_vault_changes(vault_data, 30)
 
 
 def save_last_activity(ilk):

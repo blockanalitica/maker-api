@@ -53,56 +53,59 @@ def get_vault_changes(ilk):
             .distinct("vault_uid")
             .values("vault_uid", "ilk")
         ):
-            try:
-                vault = Vault.objects.get(
-                    uid=vault_data["vault_uid"], ilk=vault_data["ilk"]
-                )
-            except Vault.DoesNotExist:
-                continue
+            save_vault_changes(vault_data, days_ago)
+            
+            
+def save_vault_changes(vault_data, days_ago):
+    time_diff = (datetime.now() - timedelta(days=days_ago)).timestamp()
+    try:
+        vault = Vault.objects.get(
+            uid=vault_data["vault_uid"], ilk=vault_data["ilk"]
+        )
+    except Vault.DoesNotExist:
+        return
 
-            latest_position = VaultEventState.objects.filter(
-                vault_uid=vault_data["vault_uid"], ilk=vault_data["ilk"]
+    latest_position = VaultEventState.objects.filter(
+        vault_uid=vault_data["vault_uid"], ilk=vault_data["ilk"]
+    ).latest()
+    try:
+        start_position = (
+            VaultEventState.objects.filter(
+                vault_uid=vault_data["vault_uid"],
+                ilk=vault_data["ilk"],
+                timestamp__lte=time_diff,
             ).latest()
-            try:
-                start_position = (
-                    VaultEventState.objects.filter(
-                        vault_uid=vault_data["vault_uid"],
-                        ilk=vault_data["ilk"],
-                        timestamp__gte=time_diff,
-                    )
-                    .order_by("timestamp")
-                    .first()
-                )
-                setattr(
-                    vault,
-                    f"collateral_change_{days_ago}d",
-                    round(
-                        (latest_position.after_collateral or 0)
-                        - (start_position.before_collateral or 0),
-                        4,
-                    ),
-                )
-                setattr(
-                    vault,
-                    f"principal_change_{days_ago}d",
-                    round(
-                        (latest_position.after_principal or 0)
-                        - (start_position.before_principal or 0),
-                        4,
-                    ),
-                )
-            except VaultEventState.DoesNotExist:
-                setattr(
-                    vault,
-                    f"collateral_change_{days_ago}d",
-                    latest_position.after_collateral or 0,
-                )
-                setattr(
-                    vault,
-                    f"principal_change_{days_ago}d",
-                    latest_position.after_principal or 0,
-                )
-            vault.save()
+        )
+        setattr(
+            vault,
+            f"collateral_change_{days_ago}d",
+            round(
+                (latest_position.after_collateral or 0)
+                - (start_position.before_collateral or 0),
+                4,
+            ),
+        )
+        setattr(
+            vault,
+            f"principal_change_{days_ago}d",
+            round(
+                (latest_position.after_principal or 0)
+                - (start_position.before_principal or 0),
+                4,
+            ),
+        )
+    except VaultEventState.DoesNotExist:
+        setattr(
+            vault,
+            f"collateral_change_{days_ago}d",
+            latest_position.after_collateral or 0,
+        )
+        setattr(
+            vault,
+            f"principal_change_{days_ago}d",
+            latest_position.after_principal or 0,
+        )
+    vault.save()
 
 
 def get_event_states_for_uid(uid, start_block=None):
