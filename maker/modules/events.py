@@ -158,7 +158,6 @@ def sync_vault_event_states():
     sync_vault_event_balances(block_number)
     if vaults:
         for vault_data in vaults:
-            print(vault_data)
             save_vault_changes(vault_data, 1)
             save_vault_changes(vault_data, 7)
             save_vault_changes(vault_data, 30)
