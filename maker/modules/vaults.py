@@ -54,14 +54,12 @@ def get_vault_changes(ilk):
             .values("vault_uid", "ilk")
         ):
             save_vault_changes(vault_data, days_ago)
-            
-            
+
+
 def save_vault_changes(vault_data, days_ago):
     time_diff = (datetime.now() - timedelta(days=days_ago)).timestamp()
     try:
-        vault = Vault.objects.get(
-            uid=vault_data["vault_uid"], ilk=vault_data["ilk"]
-        )
+        vault = Vault.objects.get(uid=vault_data["vault_uid"], ilk=vault_data["ilk"])
     except Vault.DoesNotExist:
         return
 
@@ -69,13 +67,11 @@ def save_vault_changes(vault_data, days_ago):
         vault_uid=vault_data["vault_uid"], ilk=vault_data["ilk"]
     ).latest()
     try:
-        start_position = (
-            VaultEventState.objects.filter(
-                vault_uid=vault_data["vault_uid"],
-                ilk=vault_data["ilk"],
-                timestamp__lte=time_diff,
-            ).latest()
-        )
+        start_position = VaultEventState.objects.filter(
+            vault_uid=vault_data["vault_uid"],
+            ilk=vault_data["ilk"],
+            timestamp__lte=time_diff,
+        ).latest()
         setattr(
             vault,
             f"collateral_change_{days_ago}d",
