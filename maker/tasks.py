@@ -65,7 +65,7 @@ from .modules.psm import (
 from .modules.risk import save_overall_stats, save_surplus_buffer
 from .modules.risk_premium import compute_all_vault_types
 from .modules.slippage import save_cow_slippages
-from .modules.token_price_history import save_market_prices, sync_chainlink_rounds
+from .modules.token_price_history import save_market_prices
 from .modules.vault_protection_score import save_protection_score
 from .modules.vaults import save_vaults_changes
 from .modules.vaults_at_risk import (
@@ -152,9 +152,9 @@ SCHEDULE = {
     "save_osm_daily_task": {
         "schedule": crontab(minute="15", hour="0"),
     },
-    "sync_pools_task": {
-        "schedule": crontab(minute="30", hour="0"),
-    },
+    # "sync_pools_task": {
+    #     "schedule": crontab(minute="30", hour="0"),
+    # },
     "save_backed_assets_task": {
         "schedule": crontab(minute="50", hour="0"),
     },
@@ -496,7 +496,7 @@ def save_asset_market_caps_task():
 
 @app.task
 def sync_chainlink_rounds_task():
-    sync_chainlink_rounds()
+    # sync_chainlink_rounds()
     save_market_prices()
 
 
