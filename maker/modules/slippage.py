@@ -309,7 +309,6 @@ def get_slippage_for_lp(lp_symbol, usd_amount):
     return slippage_percent
 
 
-
 def get_slippage_daily_from_datalake(symbol, date):
     data = fetch_slippage_daily(symbol, date)
     return data
@@ -322,7 +321,9 @@ def update_slippage_daily_from_date(symbol, start_date):
         pair_symbol = "stETH"
     else:
         pair_symbol = symbol.upper()
-    pair = SlippagePair.objects.get(from_asset__symbol=pair_symbol, to_asset__symbol="DAI")
+    pair = SlippagePair.objects.get(
+        from_asset__symbol=pair_symbol, to_asset__symbol="DAI"
+    )
     while current_date <= today:
         data = get_slippage_daily_from_datalake(symbol, current_date)
         results = data["results"]
@@ -348,7 +349,9 @@ def sync_slippage_daily_for_all_symbols():
             pair_symbol = "stETH"
         else:
             pair_symbol = symbol.upper()
-        pair = SlippagePair.objects.get(from_asset__symbol=pair_symbol, to_asset__symbol="DAI")
+        pair = SlippagePair.objects.get(
+            from_asset__symbol=pair_symbol, to_asset__symbol="DAI"
+        )
         data = get_slippage_daily_from_datalake(symbol, today)
         results = data["results"]
         for result in results:

@@ -464,6 +464,7 @@ def save_osm_daily_task():
 def sync_slippage_daily_from_datalake():
     sync_slippage_daily_for_all_symbols()
 
+
 @app.task(time_limit=45 * 60)
 def get_slippage_for_slippage_pairs():
     pairs = SlippagePair.objects.filter(is_active=True)
