@@ -60,3 +60,7 @@ def fetch_compound_rates(symbol, days_ago=None):
     return _datalake_get(
         "/compound/v2/ethereum/maker/{}/rates/?days_ago={}".format(symbol, days_ago)
     )
+
+
+def fetch_slippage_daily(symbol, date):
+    return _datalake_get(f"/slippage/{symbol}/{date}")
