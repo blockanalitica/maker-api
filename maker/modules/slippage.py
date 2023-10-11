@@ -4,7 +4,7 @@
 import logging
 import time
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from statistics import mean
 
@@ -12,6 +12,7 @@ from requests.exceptions import RetryError
 
 from maker.constants import LIQUIDITY_COLLATERAL_ASSET_MAP, SLIPPAGE_PAIR_SOURCE_COW
 from maker.models import Asset, SlippageDaily, SlippagePair
+from maker.sources.blockanalitica import fetch_slippage_daily
 from maker.sources.cow import get_cow_quote
 from maker.sources.oneinch import get_oneinch_quote
 from maker.sources.zerox import get_zerox_quote
@@ -306,3 +307,59 @@ def get_slippage_for_lp(lp_symbol, usd_amount):
     else:
         slippage_percent = 0
     return slippage_percent
+
+
+
+def get_slippage_daily_from_datalake(symbol, date):
+    data = fetch_slippage_daily(symbol, date)
+    return data
+
+
+def update_slippage_daily_from_date(symbol, start_date):
+    today = date.today()
+    current_date = start_date
+    if symbol == "wstETH":
+        pair_symbol = "stETH"
+    else:
+        pair_symbol = symbol.upper()
+    pair = SlippagePair.objects.get(from_asset__symbol=pair_symbol, to_asset__symbol="DAI")
+    while current_date <= today:
+        data = get_slippage_daily_from_datalake(symbol, current_date)
+        results = data["results"]
+        for result in results:
+            slippage_daily, _ = SlippageDaily.objects.get_or_create(
+                pair=pair,
+                timestamp=result["timestamp"],
+                date=result["date"],
+                usd_amount=result["usd_amount"],
+                source=result["source"],
+            )
+            slippage_daily.slippage_list = result["slippage_list"]
+            slippage_daily.slippage_percent_avg = result["slippage_percent_avg"]
+            slippage_daily.save()
+        current_date += timedelta(days=1)
+
+
+def sync_slippage_daily_for_all_symbols():
+    today = date.today()
+    symbols = ["WETH", "rETH", "wstETH", "WBTC"]
+    for symbol in symbols:
+        if symbol == "wstETH":
+            pair_symbol = "stETH"
+        else:
+            pair_symbol = symbol.upper()
+        pair = SlippagePair.objects.get(from_asset__symbol=pair_symbol, to_asset__symbol="DAI")
+        data = get_slippage_daily_from_datalake(symbol, today)
+        results = data["results"]
+        for result in results:
+            slippage_daily, _ = SlippageDaily.objects.get_or_create(
+                pair=pair,
+                timestamp=result["timestamp"],
+                date=result["date"],
+                usd_amount=result["usd_amount"],
+                source=result["source"],
+            )
+            slippage_daily.slippage_list = result["slippage_list"]
+            slippage_daily.slippage_percent_avg = result["slippage_percent_avg"]
+            slippage_daily.is_active = False
+            slippage_daily.save()

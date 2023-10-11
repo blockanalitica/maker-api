@@ -64,7 +64,7 @@ from .modules.psm import (
 )
 from .modules.risk import save_overall_stats, save_surplus_buffer
 from .modules.risk_premium import compute_all_vault_types
-from .modules.slippage import save_cow_slippages
+from .modules.slippage import save_cow_slippages, sync_slippage_daily_for_all_symbols
 from .modules.token_price_history import save_market_prices
 from .modules.vault_protection_score import save_protection_score
 from .modules.vaults import save_vaults_changes
@@ -113,9 +113,9 @@ SCHEDULE = {
     "save_asset_market_caps_task": {
         "schedule": crontab(minute="*/30"),
     },
-    "get_slippage_for_slippage_pairs": {
-        "schedule": crontab(minute="15", hour="3,9,15,21"),
-    },
+    # "get_slippage_for_slippage_pairs": {
+    #     "schedule": crontab(minute="15", hour="3,9,15,21"),
+    # },
     "send_vaults_at_risk_alert_task": {
         "schedule": crontab(minute="5-21/1"),
     },
@@ -456,6 +456,10 @@ def sync_ohlcv_asset_pairs_task():
 def save_osm_daily_task():
     save_osm_daily()
 
+
+@app.task()
+def sync_slippage_daily_from_datalake():
+    sync_slippage_daily_for_all_symbols()
 
 @app.task(time_limit=45 * 60)
 def get_slippage_for_slippage_pairs():
