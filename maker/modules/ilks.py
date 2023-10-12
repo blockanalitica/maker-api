@@ -13,6 +13,7 @@ from eth_utils import to_bytes
 
 from maker.constants import MCD_VAT_CONTRACT_ADDRESS
 from maker.modules.osm import get_medianizer_address
+from maker.sources.cortex import fetch_cortext_ilk_vaults
 from maker.sources.defisaver import get_defisaver_chain_data, get_defisaver_vault_data
 from maker.utils.blockchain.chain import Blockchain
 from maker.utils.metrics import auto_named_statsd_timer
@@ -198,7 +199,7 @@ def create_or_update_vaults(ilk):
             pass
     bulk_create = []
     bulk_update = []
-    run_timestamp = datetime.now().timestamp()
+
     dt = datetime.now()
     updated_fields = [
         "urn",
@@ -206,22 +207,13 @@ def create_or_update_vaults(ilk):
         "collateral",
         "art",
         "debt",
-        "principal",
-        "accrued_fees",
-        "paid_fees",
         "collateralization",
         "osm_price",
-        "mkt_price",
         "ratio",
         "liquidation_price",
-        "available_collateral",
-        "available_debt",
         "ds_proxy_address",
-        "block_created",
         "block_number",
-        "block_timestamp",
         "block_datetime",
-        "timestamp",
         "datetime",
         "is_active",
         "modified",
@@ -235,6 +227,7 @@ def create_or_update_vaults(ilk):
         "owner_name",
         "is_institution",
         "ds_proxy_name",
+        "last_activity"
     ]
 
     osm_price = None
@@ -242,18 +235,21 @@ def create_or_update_vaults(ilk):
     if ilk_obj.type in ["asset", "lp"]:
         osm = OSM.objects.filter(symbol=ilk_obj.collateral).latest()
         osm_price = min(osm.current_price, osm.next_price)
+    else:
+        osm_price = 1
 
     vault_map, owner_map = _upsert_and_fetch_owner_data(ilk)
-
-    for data in get_vaults_data(ilk):
+    urns = []
+    for data in fetch_cortext_ilk_vaults(ilk):
+        urns.append(data["urn"])
         try:
-            vault = Vault.objects.get(uid=data["uid"], ilk=ilk)
+            vault = Vault.objects.get(urn=data["urn"], ilk=ilk)
             created = False
         except Vault.DoesNotExist:
-            vault = Vault(uid=data["uid"], ilk=ilk)
+            vault = Vault(urn=data["urn"], ilk=ilk)
             created = True
 
-        datalake_vault = vault_map.get(data["uid"])
+        datalake_vault = vault_map.get(data["vault"])
         if datalake_vault:
             vault.ds_proxy_address = datalake_vault["ds_proxy"]
             vault.owner_address = datalake_vault["owner_address"]
@@ -270,47 +266,40 @@ def create_or_update_vaults(ilk):
                 vault.owner_name = None
                 vault.is_institution = None
         else:
-            log.debug("Couldn't find vault %s in datalake", data["uid"])
+            log.debug("Couldn't find vault %s in datalake", data["vault"])
             vault.ds_proxy_address = None
             vault.owner_address = None
             vault.owner_ens = None
             vault.owner_name = None
             vault.is_institution = None
 
-        vault.urn = data["urn"]
+        vault.uid = data["vault"]
         vault.collateral_symbol = ilk_obj.collateral
         vault.collateral = max(0, Decimal(str(data["collateral"])))
         vault.art = Decimal(str(data["art"]))
         vault.debt = Decimal(str(data["debt"]))
-        vault.principal = Decimal(str(data["principal"]))
-        vault.accrued_fees = Decimal(str(data["accrued_fees"]))
-        vault.paid_fees = Decimal(str(data["paid_fees"]))
+        vault.last_activity = data["datetime"]
 
         if osm:
             vault.osm_price = Decimal(osm.current_price)
         else:
             vault.osm_price = (
-                Decimal(str(data["osm_price"])) if data["osm_price"] else None
+                Decimal(str(data["osm_price"])) if data["osm_price"] else 1
             )
         vault.collateralization = (
             ((vault.collateral * vault.osm_price) / vault.debt) * 100
             if vault.debt
             else None
         )
-        vault.mkt_price = market_price
         vault.ratio = Decimal(str(data["ratio"])) if data["ratio"] else None
         vault.liquidation_price = (
             Decimal(str(data["liquidation_price"])) if data["liquidation_price"] else 0
         )
-        vault.available_collateral = Decimal(str(data["available_collateral"]))
-        vault.available_debt = Decimal(str(data["available_debt"]))
-        vault.block_created = data["block_created"]
-        vault.block_number = data["last_block"]
-        vault.block_timestamp = data["last_time"].timestamp()
-        vault.block_datetime = data["last_time"]
-        vault.timestamp = run_timestamp
+
+        vault.block_number = data["block_number"]
+        vault.block_datetime = data["datetime"]
         vault.datetime = dt
-        vault.is_active = data["collateral"] > 0 and data["debt"] >= 0.1
+        vault.is_active = Decimal(data["collateral"]) > 0 and Decimal(data["debt"]) >= 0.1
         vault.modified = datetime.utcnow()
         if vault.protection_service:
             vault.protection_score = "low"
@@ -343,7 +332,7 @@ def create_or_update_vaults(ilk):
                 bulk_update_models(
                     bulk_update,
                     update_field_names=updated_fields,
-                    pk_field_names=["uid", "ilk"],
+                    pk_field_names=["urn", "ilk"],
                 )
                 bulk_update = []
 
@@ -354,14 +343,15 @@ def create_or_update_vaults(ilk):
         bulk_update_models(
             bulk_update,
             update_field_names=updated_fields,
-            pk_field_names=["uid", "ilk"],
+            pk_field_names=["urn", "ilk"],
         )
+    Vault.objects.exclude(urn__in=urns, ilk=ilk).update(is_active=False)
 
     if ilk_obj.type in ["asset", "lp"]:
         generate_vaults_liquidation(ilk)
     update_ilk_with_vaults_stats(ilk)
-    save_last_activity(ilk)
-    get_defisaver_chain_data(ilk)
+    # save_last_activity(ilk)
+    # get_defisaver_chain_data(ilk)
 
 
 def update_ilk_with_vaults_stats(ilk):

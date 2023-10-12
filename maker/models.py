@@ -169,27 +169,27 @@ class VaultManager(models.Manager):
 
 
 class Vault(TimeStampedModel):
-    uid = models.CharField(max_length=42, db_index=True)
-    urn = models.CharField(max_length=42)
+    uid = models.CharField(max_length=42, db_index=True, null=True)
+    urn = models.CharField(max_length=42, db_index=True)
     ilk = models.CharField(max_length=32, db_index=True)
     collateral_symbol = models.CharField(max_length=32, null=True)
     collateral = models.DecimalField(max_digits=32, decimal_places=18)
     art = models.DecimalField(max_digits=32, decimal_places=0)
     debt = models.DecimalField(max_digits=32, decimal_places=18)
-    principal = models.DecimalField(max_digits=32, decimal_places=18)
-    accrued_fees = models.DecimalField(max_digits=32, decimal_places=18)
-    paid_fees = models.DecimalField(max_digits=32, decimal_places=18)
+    principal = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    accrued_fees = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    paid_fees = models.DecimalField(max_digits=32, decimal_places=18, null=True)
     collateralization = models.DecimalField(max_digits=32, decimal_places=18, null=True)
     osm_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
     mkt_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
     ratio = models.DecimalField(max_digits=6, decimal_places=2, null=True)
     liquidation_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
-    available_collateral = models.DecimalField(max_digits=32, decimal_places=18)
-    available_debt = models.DecimalField(max_digits=32, decimal_places=18)
+    available_collateral = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    available_debt = models.DecimalField(max_digits=32, decimal_places=18, null=True)
     owner_address = models.CharField(max_length=42, null=True)
     owner_ens = models.CharField(max_length=64, null=True)
     ds_proxy_address = models.CharField(max_length=42, null=True)
-    block_created = models.IntegerField()
+    block_created = models.IntegerField(null=True)
     block_number = models.IntegerField(null=True)
     block_timestamp = models.IntegerField(null=True)
     block_datetime = models.DateTimeField(null=True)
@@ -235,8 +235,9 @@ class Vault(TimeStampedModel):
         get_latest_by = "timestamp"
         indexes = [
             models.Index(fields=["ilk", "is_active"]),
+            models.Index(fields=["ilk", "urn"]),
         ]
-        unique_together = ["uid", "ilk"]
+        unique_together = ["urn", "ilk"]
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: uid={self.uid}, ilk={self.ilk}>"
