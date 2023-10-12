@@ -334,9 +334,6 @@ def check_to_sync_vaults():
 def sync_vaults_task():
     for idx, ilk in enumerate(Ilk.objects.with_vaults().values_list("ilk", flat=True)):
         # Delay tasks a bit as snowflake can't handle that many requests at once
-        print(ilk)
-    # ilk = "ETH-B"
-    # idx = 1
         sync_ilk_vaults_task.apply_async(args=(ilk,), countdown=idx * 2)
 
     claculate_and_save_psm_dai_supply_task.delay()
@@ -346,6 +343,7 @@ def sync_vaults_task():
 def sync_vaults_events_task():
     save_events()
     sync_vault_event_states()
+
 
 @app.task
 def sync_osm_task():

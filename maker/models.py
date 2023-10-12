@@ -184,7 +184,9 @@ class Vault(TimeStampedModel):
     mkt_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
     ratio = models.DecimalField(max_digits=6, decimal_places=2, null=True)
     liquidation_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
-    available_collateral = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    available_collateral = models.DecimalField(
+        max_digits=32, decimal_places=18, null=True
+    )
     available_debt = models.DecimalField(max_digits=32, decimal_places=18, null=True)
     owner_address = models.CharField(max_length=42, null=True)
     owner_ens = models.CharField(max_length=64, null=True)

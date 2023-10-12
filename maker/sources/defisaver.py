@@ -52,7 +52,9 @@ def get_defisaver_vault_data(vault_id):
 def get_defisaver_chain_data(ilk):
     w3 = Blockchain()
     protection_bulk_update = []
-    all_ids = Vault.objects.filter(ilk=ilk, is_active=True).values_list("uid", flat=True)
+    all_ids = Vault.objects.filter(ilk=ilk, is_active=True).values_list(
+        "uid", flat=True
+    )
     for ids in chunks(all_ids, 3000):
         vaults_protected = fetch_protected_vaults(ids, chain=w3)
         for uid, response in vaults_protected.items():

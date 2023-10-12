@@ -14,7 +14,7 @@ from eth_utils import to_bytes
 from maker.constants import MCD_VAT_CONTRACT_ADDRESS
 from maker.modules.osm import get_medianizer_address
 from maker.sources.cortex import fetch_cortext_ilk_vaults
-from maker.sources.defisaver import get_defisaver_chain_data, get_defisaver_vault_data
+from maker.sources.defisaver import get_defisaver_vault_data
 from maker.utils.blockchain.chain import Blockchain
 from maker.utils.metrics import auto_named_statsd_timer
 
@@ -28,10 +28,8 @@ from ..models import (
     VaultOwnerGroup,
     VaultsLiquidation,
 )
-from ..modules.events import save_last_activity
 from ..sources import makerburn
 from ..sources.blockanalitica import fetch_ilk_vaults
-from ..sources.dicu import get_vaults_data
 from ..sources.maker_changelog import get_addresses_for_asset
 
 log = logging.getLogger(__name__)
@@ -227,7 +225,7 @@ def create_or_update_vaults(ilk):
         "owner_name",
         "is_institution",
         "ds_proxy_name",
-        "last_activity"
+        "last_activity",
     ]
 
     osm_price = None
@@ -297,7 +295,9 @@ def create_or_update_vaults(ilk):
         vault.block_number = data["block_number"]
         vault.block_datetime = data["datetime"]
         vault.datetime = dt
-        vault.is_active = Decimal(data["collateral"]) > 0 and Decimal(data["debt"]) >= 0.1
+        vault.is_active = (
+            Decimal(data["collateral"]) > 0 and Decimal(data["debt"]) >= 0.1
+        )
         vault.modified = datetime.utcnow()
         if vault.protection_service:
             vault.protection_score = "low"
@@ -347,7 +347,16 @@ def create_or_update_vaults(ilk):
         generate_vaults_liquidation(ilk)
     update_ilk_with_vaults_stats(ilk)
 
-    Vault.objects.exclude(datetime=dt).filter(ilk=ilk).update(is_active=False, debt=0, collateral=0, art=0, liquidation_price=0, collateralization=0, liquidation_drop=0, modified=datetime.utcnow())
+    Vault.objects.exclude(datetime=dt).filter(ilk=ilk).update(
+        is_active=False,
+        debt=0,
+        collateral=0,
+        art=0,
+        liquidation_price=0,
+        collateralization=0,
+        liquidation_drop=0,
+        modified=datetime.utcnow(),
+    )
     # save_last_activity(ilk)
     # get_defisaver_chain_data(ilk)
 
