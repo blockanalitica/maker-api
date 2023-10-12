@@ -239,9 +239,7 @@ def create_or_update_vaults(ilk):
         osm_price = 1
 
     vault_map, owner_map = _upsert_and_fetch_owner_data(ilk)
-    urns = []
     for data in fetch_cortext_ilk_vaults(ilk):
-        urns.append(data["urn"])
         try:
             vault = Vault.objects.get(urn=data["urn"], ilk=ilk)
             created = False
@@ -345,11 +343,11 @@ def create_or_update_vaults(ilk):
             update_field_names=updated_fields,
             pk_field_names=["urn", "ilk"],
         )
-    Vault.objects.exclude(urn__in=urns, ilk=ilk).update(is_active=False)
-
     if ilk_obj.type in ["asset", "lp"]:
         generate_vaults_liquidation(ilk)
     update_ilk_with_vaults_stats(ilk)
+
+    Vault.objects.exclude(datetime=dt).filter(ilk=ilk).update(is_active=False, debt=0, collateral=0, art=0, liquidation_price=0, collateralization=0, liquidation_drop=0, modified=datetime.utcnow())
     # save_last_activity(ilk)
     # get_defisaver_chain_data(ilk)
 
