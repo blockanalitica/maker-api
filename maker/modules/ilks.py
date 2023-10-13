@@ -273,7 +273,10 @@ def create_or_update_vaults(ilk):
         if uid is None:
             uid = data["urn"][:10]
 
-        if data["urn"] == "0xd359b2f80bf9efd66c43ed302a839c9f37965535" and ilk == "ETH-A":
+        if (
+            data["urn"] == "0xd359b2f80bf9efd66c43ed302a839c9f37965535"
+            and ilk == "ETH-A"
+        ):
             uid = data["urn"][:10]
         vault.uid = uid
         vault.collateral_symbol = ilk_obj.collateral
