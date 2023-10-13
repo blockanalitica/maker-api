@@ -200,6 +200,7 @@ def create_or_update_vaults(ilk):
 
     dt = datetime.now()
     updated_fields = [
+        "uid",
         "urn",
         "ilk",
         "collateral",
@@ -268,8 +269,13 @@ def create_or_update_vaults(ilk):
             vault.owner_ens = None
             vault.owner_name = None
             vault.is_institution = None
+        uid = data["vault"]
+        if uid is None:
+            uid = data["urn"][:10]
 
-        vault.uid = data["vault"]
+        if data["urn"] == "0xd359b2f80bf9efd66c43ed302a839c9f37965535" and ilk == "ETH-A":
+            uid = data["urn"][:10]
+        vault.uid = uid
         vault.collateral_symbol = ilk_obj.collateral
         vault.collateral = max(0, Decimal(str(data["collateral"])))
         vault.art = Decimal(str(data["art"]))
