@@ -91,16 +91,6 @@ DEFAULT_SCENARIO_PARAMS = {
         "jump_frequency": 2,
         "keeper_profit": 0.05,
     },
-    "LINK-A": {
-        "jump_severity": -0.6,
-        "jump_frequency": 2,
-        "keeper_profit": 0.05,
-    },
-    "MATIC-A": {
-        "jump_severity": -0.6,
-        "jump_frequency": 2,
-        "keeper_profit": 0.05,
-    },
     "WBTC-A": {
         "jump_severity": -0.45,
         "jump_frequency": 2,
@@ -113,11 +103,6 @@ DEFAULT_SCENARIO_PARAMS = {
     },
     "WBTC-C": {
         "jump_severity": -0.45,
-        "jump_frequency": 2,
-        "keeper_profit": 0.05,
-    },
-    "YFI-A": {
-        "jump_severity": -0.6,
         "jump_frequency": 2,
         "keeper_profit": 0.05,
     },
