@@ -17,20 +17,24 @@ def get_vaults_at_risk():
     category_debt = {"high": 0, "medium": 0, "low": 0}
     total_debt = 0
     aggregate_data = {}
-    vaults_at_risk = Vault.objects.filter(is_at_risk=True, is_active=True).exclude(ilk__in=["GUNIV3DAIUSDC2-A", "UNIV2DAIUSDC-A", "GUNIV3DAIUSDC1-A"]).values(
-        "uid",
-        "ilk",
-        "collateral_symbol",
-        "owner_address",
-        "collateral",
-        "debt",
-        "collateralization",
-        "liquidation_price",
-        "protection_score",
-        "last_activity",
-        "owner_ens",
-        "owner_name",
-        "protection_service",
+    vaults_at_risk = (
+        Vault.objects.filter(is_at_risk=True, is_active=True)
+        .exclude(ilk__in=["GUNIV3DAIUSDC2-A", "UNIV2DAIUSDC-A", "GUNIV3DAIUSDC1-A"])
+        .values(
+            "uid",
+            "ilk",
+            "collateral_symbol",
+            "owner_address",
+            "collateral",
+            "debt",
+            "collateralization",
+            "liquidation_price",
+            "protection_score",
+            "last_activity",
+            "owner_ens",
+            "owner_name",
+            "protection_service",
+        )
     )
 
     for vault in vaults_at_risk:

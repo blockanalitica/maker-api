@@ -34,7 +34,9 @@ class VaultsAtRiskMarketView(APIView):
 
 class VaultsAtRiskCountView(APIView):
     def get(self, request):
-        at_risk = Vault.objects.filter(is_at_risk=True, is_active=True).exclude(ilk__in=["GUNIV3DAIUSDC2-A", "UNIV2DAIUSDC-A", "GUNIV3DAIUSDC1-A"]).aggregate(
-            count=Count("id"), debt=Sum("debt")
+        at_risk = (
+            Vault.objects.filter(is_at_risk=True, is_active=True)
+            .exclude(ilk__in=["GUNIV3DAIUSDC2-A", "UNIV2DAIUSDC-A", "GUNIV3DAIUSDC1-A"])
+            .aggregate(count=Count("id"), debt=Sum("debt"))
         )
         return Response(at_risk, status.HTTP_200_OK)
