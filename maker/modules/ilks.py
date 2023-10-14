@@ -235,7 +235,7 @@ def create_or_update_vaults(ilk):
         osm = OSM.objects.filter(symbol=ilk_obj.collateral).latest()
         osm_price = min(osm.current_price, osm.next_price)
     else:
-        osm_price = 1
+        osm_price = None
 
     vault_map, owner_map = _upsert_and_fetch_owner_data(ilk)
     for data in fetch_cortext_ilk_vaults(ilk):
@@ -289,13 +289,14 @@ def create_or_update_vaults(ilk):
             vault.osm_price = Decimal(osm.current_price)
         else:
             vault.osm_price = (
-                Decimal(str(data["osm_price"])) if data["osm_price"] else 1
+                Decimal(str(data["osm_price"])) if data["osm_price"] else None
             )
-        vault.collateralization = (
-            ((vault.collateral * vault.osm_price) / vault.debt) * 100
-            if vault.debt
-            else None
-        )
+        if vault.osm_price:
+            vault.collateralization = (
+                ((vault.collateral * vault.osm_price) / vault.debt) * 100
+                if vault.debt
+                else None
+            )
         vault.ratio = Decimal(str(data["ratio"])) if data["ratio"] else None
         vault.liquidation_price = (
             Decimal(str(data["liquidation_price"])) if data["liquidation_price"] else 0
