@@ -235,7 +235,6 @@ def create_or_update_vaults(ilk):
         "principal_change_30d",
     ]
 
-
     vault_map, owner_map = _upsert_and_fetch_owner_data(ilk)
     # vault_map = {}
     # owner_map = {}
