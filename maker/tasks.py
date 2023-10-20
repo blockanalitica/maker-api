@@ -67,7 +67,6 @@ from .modules.risk_premium import compute_all_vault_types
 from .modules.slippage import save_cow_slippages, sync_slippage_daily_for_all_symbols
 from .modules.token_price_history import save_market_prices
 from .modules.vault_protection_score import save_protection_score
-from .modules.vaults import save_vaults_changes
 from .modules.vaults_at_risk import (
     refresh_market_risk_for_vaults,
     refresh_vaults_at_risk,
@@ -137,9 +136,6 @@ SCHEDULE = {
     "save_ilk_stats_task": {
         "schedule": crontab(minute="0", hour="*/1"),
     },
-    "save_vault_changes_task": {
-        "schedule": crontab(minute="0", hour="*/1"),
-    },
     "sync_slippage_daily_from_datalake": {
         "schedule": crontab(minute="0", hour="*/1"),
     },
@@ -202,11 +198,6 @@ SCHEDULE = {
 @app.task
 def sync_ilk_vaults_task(ilk):
     create_or_update_vaults(ilk)
-
-
-@app.task
-def save_vault_changes_task():
-    save_vaults_changes()
 
 
 @app.task
