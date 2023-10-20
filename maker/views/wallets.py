@@ -88,10 +88,18 @@ class WalletDebtHistoryView(WalletMixin, APIView):
     def get(self, request, address):
         queryset = self.get_base_queryset(request, address)
         vault_uids = list(queryset.values_list("uid", flat=True))
+        vault_uid = vault_uids[0]
+        urn = Vault.objects.get(uid=vault_uid).urn
+        print("urn", urn)
+        print("urn", urn)
+        print("urn", urn)
+        print("urn", urn)
+        print("urn", urn)
+        print("urn", urn)
+        print("urn", urn)
 
         if not vault_uids:
             return Response(None, status.HTTP_200_OK)
-
         sql = """
             SELECT
                   a.timestamp
@@ -114,6 +122,37 @@ class WalletDebtHistoryView(WalletMixin, APIView):
             LEFT JOIN LATERAL (
                 SELECT after_principal
                 FROM maker_vaulteventstate x
+                WHERE x.timestamp <= a.timestamp
+                AND x.vault_uid = b.vault_uid
+                ORDER BY x.timestamp DESC
+                LIMIT 1
+            ) c
+            ON 1=1
+            ORDER BY a.timestamp
+        """
+
+        sql = """
+            SELECT
+                  a.timestamp
+                , b.vault_uid
+                , b.ilk
+                , c.after_principal
+            FROM (
+                SELECT
+                    DISTINCT(timestamp)
+                FROM maker_urneventstate
+                WHERE vault_uid IN %s
+                UNION
+                SELECT cast(extract(epoch from current_timestamp) as integer) as timestamp
+            ) a
+            CROSS JOIN (
+                SELECT DISTINCT(vault_uid), ilk
+                FROM maker_urneventstate
+                WHERE vault_uid IN %s
+            ) b
+            LEFT JOIN LATERAL (
+                SELECT after_principal
+                FROM maker_urneventstate x
                 WHERE x.timestamp <= a.timestamp
                 AND x.vault_uid = b.vault_uid
                 ORDER BY x.timestamp DESC

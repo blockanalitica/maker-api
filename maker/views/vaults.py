@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from datetime import datetime, timedelta
-
+from django.db.models import F
 import serpy
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
@@ -18,6 +18,8 @@ from maker.models import (
     Vault,
     VaultEventState,
     VaultProtectionScore,
+    UrnEventState,
+    Asset,
 )
 from maker.utils.views import PaginatedApiView
 
@@ -239,27 +241,28 @@ class VaultCrHistoryView(APIView):
         symbol = vault.ilk.split("-")[0]
 
         days_ago = int(request.GET.get("days_ago", 7))
+        start_dt = datetime.now() - timedelta(days=days_ago)
 
-        start_cr = (datetime.now() - timedelta(days=days_ago)).timestamp()
         try:
-            start_timestamp = (
-                VaultEventState.objects.filter(
-                    vault_uid=vault.uid, timestamp__lte=start_cr
-                )
+            first_entry_dt = (
+                UrnEventState.objects.filter(urn=vault.urn, datetime__lte=start_dt)
                 .latest()
-                .timestamp
+                .datetime
             )
-        except VaultEventState.DoesNotExist:
-            start_timestamp = (
-                VaultEventState.objects.filter(vault_uid=vault.uid).earliest().timestamp
+            start_timestamp = int(first_entry_dt.timestamp())
+        except UrnEventState.DoesNotExist:
+            first_entry_dt = (
+                UrnEventState.objects.filter(urn=vault.urn).earliest().datetime
             )
+            start_timestamp = int(first_entry_dt.timestamp())
+            print("excppefpfdeprprep")
+            print("excppefpfdeprprep")
 
         crs = iter(
-            VaultEventState.objects.filter(
-                vault_uid=vault.uid, timestamp__gte=start_timestamp
-            )
-            .values("after_collateral", "after_principal", "timestamp")
-            .order_by("timestamp")
+            UrnEventState.objects.filter(urn=vault.urn, datetime__gte=first_entry_dt)
+            .annotate(collateral=F("ink") / 10**18)
+            .values("collateral", "debt", "datetime")
+            .order_by("datetime")
         )
 
         data = []
@@ -317,15 +320,19 @@ class VaultCrHistoryView(APIView):
                 else:
                     break
 
-            if curr_cr["after_principal"] > 0:
+            if curr_cr["debt"] > 0:
+                print("debt am", curr_cr["debt"])
+                print("collateral", curr_cr["collateral"])
+                print("osm", osm["current_price"])
                 cr = round(
                     (
-                        (curr_cr["after_collateral"] * osm["current_price"])
-                        / (curr_cr["after_principal"] or 1)
+                        (curr_cr["collateral"] * osm["current_price"])
+                        / (curr_cr["debt"] or 1)
                         * 100
                     ),
                     2,
                 )
+                # print(cr)
             else:
                 cr = 0
 
@@ -354,11 +361,13 @@ class VaultCrHistoryView(APIView):
                 }
             )
 
-        events = VaultEventState.objects.filter(
-            ilk=ilk, vault_uid=uid, timestamp__gte=start_cr
-        ).values(
-            "timestamp",
-            "human_operation",
+        events = (
+            UrnEventState.objects.filter(ilk=ilk, urn=vault.urn, datetime__gte=start_dt)
+            .annotate(human_operation=F("operation"))
+            .values(
+                "datetime",
+                "human_operation",
+            )
         )
         response = {"results": data, "events": events}
         return Response(response, status.HTTP_200_OK)

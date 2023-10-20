@@ -42,7 +42,7 @@ from .modules.discord import (
     send_risk_premium_and_protection_score_alerts,
     send_vaults_at_risk_alert,
 )
-from .modules.events import save_events, sync_vault_event_states
+from .modules.events import save_urn_event_states
 from .modules.ilk import save_stats_for_vault
 from .modules.ilks import create_or_update_vaults, save_ilks, sync_vaults_with_defisaver
 from .modules.liquidations import (
@@ -112,9 +112,9 @@ SCHEDULE = {
     "save_asset_market_caps_task": {
         "schedule": crontab(minute="*/30"),
     },
-    "sync_vaults_events_task": {
-        "schedule": crontab(minute="*/30"),
-    },
+    # "sync_vaults_events_task": {
+    #     "schedule": crontab(minute="*/30"),
+    # },
     # "get_slippage_for_slippage_pairs": {
     #     "schedule": crontab(minute="15", hour="3,9,15,21"),
     # },
@@ -332,8 +332,7 @@ def sync_vaults_task():
 
 @app.task
 def sync_vaults_events_task():
-    save_events()
-    sync_vault_event_states()
+    save_urn_event_states()
 
 
 @app.task
