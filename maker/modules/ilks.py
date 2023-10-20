@@ -13,7 +13,7 @@ from eth_utils import to_bytes
 
 from maker.constants import MCD_VAT_CONTRACT_ADDRESS
 from maker.modules.osm import get_medianizer_address
-from maker.sources.cortex import fetch_cortext_ilk_vaults
+from maker.sources.cortex import fetch_cortex_ilk_vaults
 from maker.sources.defisaver import get_defisaver_vault_data
 from maker.utils.blockchain.chain import Blockchain
 from maker.utils.metrics import auto_named_statsd_timer
@@ -238,7 +238,7 @@ def create_or_update_vaults(ilk):
         osm_price = None
 
     vault_map, owner_map = _upsert_and_fetch_owner_data(ilk)
-    for data in fetch_cortext_ilk_vaults(ilk):
+    for data in fetch_cortex_ilk_vaults(ilk):
         try:
             vault = Vault.objects.get(urn=data["urn"], ilk=ilk)
             created = False
@@ -480,3 +480,5 @@ def generate_vaults_liquidation(ilk):
                     "debt": vaults["debt"] or 0,
                 },
             )
+
+

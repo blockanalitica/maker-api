@@ -3,12 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from datetime import datetime, timedelta
-
+from maker.sources.cortex import fetch_cortex_urn_states
 from web3 import Web3
-
+from django_bulk_load import bulk_insert_models
 from maker.utils.blockchain.chain import Blockchain
 
-from ..models import Ilk, RawEvent, Vault, VaultEventState
+from ..models import Ilk, RawEvent, Vault, VaultEventState, UrnEventState
+from maker.utils.metrics import auto_named_statsd_timer
 
 MAKER_MCD_VAT = "0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B"
 
@@ -104,104 +105,19 @@ def save_vault_changes(vault_data, days_ago):
     vault.save()
 
 
-def get_event_states_for_uid(uid, start_block=None):
-    event_states = []
-    block_filter = {}
+# ATLAS-API DATA
 
-    if start_block:
-        block_filter["block_number__gt"] = start_block
 
-    events = RawEvent.objects.filter(vault_uid=uid, **block_filter).values(
-        "block_number",
-        "timestamp",
-        "tx_hash",
-        "ilk",
-        "operation",
-        "collateral",
-        "principal",
-        "fees",
-        "osm_price",
-        "rate",
-    )
-    block_number = 0
-    timestamp = 0
-    tx_hash = ""
-    ilk = ""
-    operation = ""
-    collateral = 0
-    principal = 0
-    fees = 0
-    osm_price = 0
-    rate = 0
-    for event in events:
-        event_operation = event["operation"]
-        if block_number == 0:
-            block_number = event["block_number"]
-            operation = event["operation"]
-            collateral = event["collateral"]
-            principal = event["principal"]
-            fees = event["fees"]
-            osm_price = event["osm_price"]
-            timestamp = event["timestamp"]
-            tx_hash = event["tx_hash"]
-            ilk = event["ilk"]
-            rate = event["rate"]
-        elif block_number == event["block_number"]:
-            block_number = event["block_number"]
-            event_operation = event["operation"]
-            operations = operation.split("-")
-            if event_operation not in operations:
-                operations.append(event_operation)
-                operations.sort()
-                operation = "-".join(operations)
-            collateral += event["collateral"]
-            principal += event["principal"]
-            fees += event["fees"]
-            osm_price = event["osm_price"]
-            timestamp = event["timestamp"]
-            tx_hash = event["tx_hash"]
-            ilk = event["ilk"]
-            rate = event["rate"]
-        else:
-            event_states.append(
-                VaultEventState(
-                    vault_uid=uid,
-                    block_number=block_number,
-                    timestamp=timestamp,
-                    tx_hash=tx_hash,
-                    ilk=ilk,
-                    operation=operation,
-                    collateral=collateral,
-                    principal=principal,
-                    fees=fees,
-                    osm_price=osm_price,
-                    rate=rate,
-                )
-            )
-            block_number = event["block_number"]
-            event_operation = event["operation"]
-            operation = event["operation"]
-            collateral = event["collateral"]
-            principal = event["principal"]
-            fees = event["fees"]
-            osm_price = event["osm_price"]
-            timestamp = event["timestamp"]
-            tx_hash = event["tx_hash"]
-            ilk = event["ilk"]
-            rate = event["rate"]
-    event_states.append(
-        VaultEventState(
-            vault_uid=uid,
-            block_number=block_number,
-            timestamp=timestamp,
-            tx_hash=tx_hash,
-            ilk=ilk,
-            operation=operation,
-            collateral=collateral,
-            principal=principal,
-            fees=fees,
-            osm_price=osm_price,
-            rate=rate,
-        )
-    )
-    return event_states
+@auto_named_statsd_timer
+def save_urn_event_states():
+    latest_block = UrnEventState.latest_block_number()
+    urn_states_data = fetch_cortex_urn_states(latest_block)
+    bulk_create = []
+    for urn_state in urn_states_data:
+        bulk_create.append(UrnEventState(**urn_state))
+        if len(bulk_create) >= 1000:
+            bulk_insert_models(bulk_create, ignore_conflicts=True)
+            bulk_create = []
+
+    if bulk_create:
+        bulk_insert_models(bulk_create, ignore_conflicts=True)

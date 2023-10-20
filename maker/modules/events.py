@@ -173,7 +173,7 @@ def save_last_activity(ilk):
             pass
 
 
-def get_event_states_for_uid(uid, start_block=None):
+def t(uid, start_block=None):
     event_states = []
     block_filter = {}
 
