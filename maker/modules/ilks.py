@@ -227,18 +227,18 @@ def create_or_update_vaults(ilk):
         "is_institution",
         "ds_proxy_name",
         "last_activity",
+        "collateral_change_1d",
+        "collateral_change_7d",
+        "collateral_change_30d",
+        "principal_change_1d",
+        "principal_change_7d",
+        "principal_change_30d",
     ]
 
-    osm_price = None
-    osm = None
-    if ilk_obj.type in ["asset", "lp"]:
-        osm = OSM.objects.filter(symbol=ilk_obj.collateral).latest()
-        osm_price = min(osm.current_price, osm.next_price)
-    else:
-        osm_price = None
-
     vault_map, owner_map = _upsert_and_fetch_owner_data(ilk)
-    for data in fetch_cortex_ilk_vaults(ilk):
+    # vault_map = {}
+    # owner_map = {}
+    for data in fetch_cortext_ilk_vaults(ilk):
         try:
             vault = Vault.objects.get(urn=data["urn"], ilk=ilk)
             created = False
@@ -284,13 +284,7 @@ def create_or_update_vaults(ilk):
         vault.art = Decimal(str(data["art"]))
         vault.debt = Decimal(str(data["debt"]))
         vault.last_activity = data["datetime"]
-
-        if osm:
-            vault.osm_price = Decimal(osm.current_price)
-        else:
-            vault.osm_price = (
-                Decimal(str(data["osm_price"])) if data["osm_price"] else None
-            )
+        vault.osm_price = Decimal(str(data["osm_price"])) if data["osm_price"] else None
         if vault.osm_price:
             vault.collateralization = (
                 ((vault.collateral * vault.osm_price) / vault.debt) * 100
@@ -308,6 +302,12 @@ def create_or_update_vaults(ilk):
         vault.is_active = (
             Decimal(data["collateral"]) > 0 and Decimal(data["debt"]) >= 0.1
         )
+        vault.collateral_change_1d = data["ink_change_1d"]
+        vault.collateral_change_7d = data["ink_change_7d"]
+        vault.collateral_change_30d = data["ink_change_30d"]
+        vault.principal_change_1d = data["art_change_1d"]
+        vault.principal_change_7d = data["art_change_7d"]
+        vault.principal_change_30d = data["art_change_30d"]
         vault.modified = datetime.utcnow()
         if vault.protection_service:
             vault.protection_score = "low"
@@ -315,11 +315,11 @@ def create_or_update_vaults(ilk):
         vault.is_at_risk = False
         vault.is_at_risk_market = False
         if vault.is_active:
-            if osm_price:
-                vault.is_at_risk = vault.liquidation_price >= osm_price
+            if vault.osm_price:
+                vault.is_at_risk = vault.liquidation_price >= vault.osm_price
                 if not ilk_obj.is_stable:
                     vault.liquidation_drop = round(
-                        1 - (vault.liquidation_price / osm_price), 2
+                        1 - (vault.liquidation_price / vault.osm_price), 2
                     )
             else:
                 if ilk_obj.type in ["asset", "lp"]:
@@ -365,6 +365,8 @@ def create_or_update_vaults(ilk):
         liquidation_price=0,
         collateralization=0,
         liquidation_drop=0,
+        is_at_risk=False,
+        is_at_risk_market=False,
         modified=datetime.utcnow(),
     )
     # save_last_activity(ilk)
