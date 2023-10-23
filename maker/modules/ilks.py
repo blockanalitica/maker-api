@@ -14,7 +14,6 @@ from eth_utils import to_bytes
 from maker.constants import MCD_VAT_CONTRACT_ADDRESS
 from maker.modules.osm import get_medianizer_address
 from maker.sources.cortex import fetch_cortext_ilk_vaults
-from maker.sources.defisaver import get_defisaver_vault_data
 from maker.utils.blockchain.chain import Blockchain
 from maker.utils.metrics import auto_named_statsd_timer
 
@@ -25,11 +24,9 @@ from ..models import (
     MarketPrice,
     Vault,
     VaultOwner,
-    VaultOwnerGroup,
     VaultsLiquidation,
 )
 from ..sources import makerburn
-from ..sources.blockanalitica import fetch_ilk_vaults
 from ..sources.maker_changelog import get_addresses_for_asset
 
 log = logging.getLogger(__name__)
@@ -149,40 +146,6 @@ def save_ilks():
             Ilk.objects.filter(ilk=ilk).update(**ilk_data)
 
 
-def _upsert_and_fetch_owner_data(ilk):
-    vault_owners = {}
-    vault_map = {}
-    owner_map = {}
-    for vault in fetch_ilk_vaults(ilk):
-        vault_map[str(vault["vault_uid"])] = {
-            "ds_proxy": vault["ds_proxy"],
-            "owner_address": vault["owner_address"],
-            "strategy": vault["strategy"],
-            "type": vault["type"],
-        }
-        if vault["owner_address"]:
-            vault_owners[vault["owner_address"]] = {"ens": vault["owner_ens"]}
-            if vault["type"] == "yearn":
-                vault_owners[vault["owner_address"]]["group_slug"] = "yearn-strategies"
-
-    for address, owner_data in vault_owners.items():
-        owner, _ = VaultOwner.objects.get_or_create(address=address)
-        if owner.group is None and owner_data.get("group_slug") == "yearn-strategies":
-            group = VaultOwnerGroup.objects.get(slug="yearn-strategies")
-            owner.group = group
-            owner.save(update_fields=["group"])
-        if owner.ens != owner_data["ens"]:
-            owner.ens = owner_data["ens"]
-            owner.save(update_fields=["ens"])
-
-        owner_map[address] = {
-            "owner_name": owner.name,
-            "ens": owner.ens,
-            "is_institution": "institution" in (owner.tags or []),
-        }
-    return vault_map, owner_map
-
-
 @auto_named_statsd_timer
 def create_or_update_vaults(ilk):
     ilk_obj = Ilk.objects.get(ilk=ilk)
@@ -235,9 +198,6 @@ def create_or_update_vaults(ilk):
         "principal_change_30d",
     ]
 
-    vault_map, owner_map = _upsert_and_fetch_owner_data(ilk)
-    # vault_map = {}
-    # owner_map = {}
     for data in fetch_cortext_ilk_vaults(ilk):
         try:
             vault = Vault.objects.get(urn=data["urn"], ilk=ilk)
@@ -245,30 +205,15 @@ def create_or_update_vaults(ilk):
         except Vault.DoesNotExist:
             vault = Vault(urn=data["urn"], ilk=ilk)
             created = True
+        owner = None
+        if data["owner"]:
+            owner, _ = VaultOwner.objects.get_or_create(address=data["owner"])
 
-        datalake_vault = vault_map.get(data["vault"])
-        if datalake_vault:
-            vault.ds_proxy_address = datalake_vault["ds_proxy"]
-            vault.owner_address = datalake_vault["owner_address"]
-            if datalake_vault["type"] == "yearn":
-                vault.ds_proxy_name = datalake_vault["strategy"]
-
-            owner_data = owner_map.get(datalake_vault["owner_address"])
-            if owner_data:
-                vault.owner_ens = owner_data["ens"]
-                vault.owner_name = owner_data["owner_name"]
-                vault.is_institution = owner_data["is_institution"]
-            else:
-                vault.owner_ens = None
-                vault.owner_name = None
-                vault.is_institution = None
-        else:
-            log.debug("Couldn't find vault %s in datalake", data["vault"])
-            vault.ds_proxy_address = None
-            vault.owner_address = None
-            vault.owner_ens = None
-            vault.owner_name = None
-            vault.is_institution = None
+        vault.ds_proxy_address = data["proxy"]
+        vault.owner_address = data["owner"]
+        vault.owner_ens = owner.ens if owner else None
+        vault.owner_name = owner.name if owner else None
+        vault.is_institution = "institution" in (owner.tags or []) if owner else False
         uid = data["vault"]
         if uid is None:
             uid = data["urn"][:10]
@@ -369,8 +314,6 @@ def create_or_update_vaults(ilk):
         is_at_risk_market=False,
         modified=datetime.utcnow(),
     )
-    # save_last_activity(ilk)
-    # get_defisaver_chain_data(ilk)
 
 
 def update_ilk_with_vaults_stats(ilk):
@@ -381,42 +324,6 @@ def update_ilk_with_vaults_stats(ilk):
         total_debt=info["total_debt"] or Decimal("0"),
         vaults_count=info["vaults_count"] or 0,
     )
-
-
-def sync_vaults_with_defisaver():
-    vaults = Vault.objects.filter(is_at_risk=True, is_active=True)
-
-    for vault in vaults:
-        payload, liquidated = get_defisaver_vault_data(vault.uid)
-        # if it's liquidated, or collateralization is MASSIVE set it to inactive.
-        # Defisaver returns massive collateralization in some weird cases, so to avoid
-        # getting errors when updating the Vault, just update the is_active and call
-        # it a day.
-
-        if liquidated or (payload and payload["collateralization"] > 10**14):
-            vault.is_active = False
-            vault.is_at_risk = False
-            vault.save(update_fields=["is_active", "is_at_risk"])
-        else:
-            if not payload:
-                continue
-            vault.collateral = payload["collateral"]
-            vault.debt = payload["debt"]
-            vault.collateralization = payload["collateralization"]
-            vault.liquidation_price = payload["liquidation_price"]
-            vault.is_active = payload["collateral"] > 0 and payload["debt"] >= 1
-            price = min(payload["price"], payload["next_price"])
-            vault.is_at_risk = vault.liquidation_price >= price
-            vault.save(
-                update_fields=[
-                    "collateral",
-                    "debt",
-                    "collateralization",
-                    "liquidation_price",
-                    "is_active",
-                    "is_at_risk",
-                ]
-            )
 
 
 def get_cr(lr, drop):
