@@ -24,7 +24,6 @@ from ..models import (
     MarketPrice,
     Vault,
     VaultOwner,
-    VaultOwnerGroup,
     VaultsLiquidation,
 )
 from ..sources import makerburn
@@ -211,7 +210,7 @@ def create_or_update_vaults(ilk):
         if data["owner"]:
             owner = VaultOwner.objects.get_or_create(address=data["owner"])
 
-        vault.ds_proxy_address = data["ds_proxy"]
+        vault.ds_proxy_address = data["proxy"]
         vault.owner_address = data["owner"]
         vault.owner_ens = owner.ens
         vault.owner_name = owner.name
