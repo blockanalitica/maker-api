@@ -1,13 +1,16 @@
 # SPDX-FileCopyrightText: © 2022 Dai Foundation <www.daifoundation.org>
 #
 # SPDX-License-Identifier: Apache-2.0
+from decimal import Decimal
+
 from django.db import connection
+from django.db.models import Case, F, FloatField, OuterRef, Subquery, When
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from maker.models import Vault, VaultEventState, VaultOwner, VaultOwnerGroup
+from maker.models import UrnEventState, Vault, VaultOwner, VaultOwnerGroup
 from maker.utils.views import PaginatedApiView, fetch_all
 
 
@@ -87,75 +90,40 @@ class WalletView(WalletMixin, APIView):
 class WalletDebtHistoryView(WalletMixin, APIView):
     def get(self, request, address):
         queryset = self.get_base_queryset(request, address)
-        vault_uids = list(queryset.values_list("uid", flat=True))
-        vault_uid = vault_uids[0]
-        urn = Vault.objects.get(uid=vault_uid).urn
-        print("urn", urn)
-        print("urn", urn)
-        print("urn", urn)
-        print("urn", urn)
-        print("urn", urn)
-        print("urn", urn)
-        print("urn", urn)
+        vault_urns = list(queryset.values_list("urn", flat=True))
 
-        if not vault_uids:
+        if not vault_urns:
             return Response(None, status.HTTP_200_OK)
-        sql = """
-            SELECT
-                  a.timestamp
-                , b.vault_uid
-                , b.ilk
-                , c.after_principal
-            FROM (
-                SELECT
-                    DISTINCT(timestamp)
-                FROM maker_vaulteventstate
-                WHERE vault_uid IN %s
-                UNION
-                SELECT cast(extract(epoch from current_timestamp) as integer) as timestamp
-            ) a
-            CROSS JOIN (
-                SELECT DISTINCT(vault_uid), ilk
-                FROM maker_vaulteventstate
-                WHERE vault_uid IN %s
-            ) b
-            LEFT JOIN LATERAL (
-                SELECT after_principal
-                FROM maker_vaulteventstate x
-                WHERE x.timestamp <= a.timestamp
-                AND x.vault_uid = b.vault_uid
-                ORDER BY x.timestamp DESC
-                LIMIT 1
-            ) c
-            ON 1=1
-            ORDER BY a.timestamp
-        """
 
         sql = """
             SELECT
-                  a.timestamp
-                , b.vault_uid
+                a.timestamp
+                , b.uid AS vault_uid
                 , b.ilk
                 , c.after_principal
             FROM (
                 SELECT
-                    DISTINCT(timestamp)
+                    DISTINCT(datetime) AS timestamp
+                    , urn
                 FROM maker_urneventstate
-                WHERE vault_uid IN %s
+                WHERE urn IN %s
                 UNION
-                SELECT cast(extract(epoch from current_timestamp) as integer) as timestamp
+                SELECT
+                    to_timestamp(cast(extract(epoch from current_timestamp) as double precision))
+                    AS timestamp
+                    , NULL as urn
             ) a
             CROSS JOIN (
-                SELECT DISTINCT(vault_uid), ilk
-                FROM maker_urneventstate
-                WHERE vault_uid IN %s
+                SELECT DISTINCT(uid), ilk, urn  -- Select the urn column here
+                FROM maker_vault
+                WHERE urn IN %s
             ) b
             LEFT JOIN LATERAL (
-                SELECT after_principal
+                SELECT debt AS after_principal
                 FROM maker_urneventstate x
-                WHERE x.timestamp <= a.timestamp
-                AND x.vault_uid = b.vault_uid
-                ORDER BY x.timestamp DESC
+                WHERE x.datetime <= a.timestamp
+                AND x.urn = b.urn
+                ORDER BY x.datetime DESC
                 LIMIT 1
             ) c
             ON 1=1
@@ -163,7 +131,7 @@ class WalletDebtHistoryView(WalletMixin, APIView):
         """
 
         with connection.cursor() as cursor:
-            cursor.execute(sql, [tuple(vault_uids), tuple(vault_uids)])
+            cursor.execute(sql, [tuple(vault_urns), tuple(vault_urns)])
             data = fetch_all(cursor)
 
         return Response(data, status.HTTP_200_OK)
@@ -177,18 +145,63 @@ class WalletEventsView(WalletMixin, PaginatedApiView):
 
     def get_queryset(self, **kwargs):
         queryset = self.get_base_queryset(self.request, kwargs["address"])
-        vault_uids = list(queryset.values_list("uid", flat=True))
-        return VaultEventState.objects.filter(vault_uid__in=vault_uids).values(
-            "datetime",
-            "operation",
-            "human_operation",
-            "block_number",
-            "collateral",
-            "principal",
-            "before_ratio",
-            "after_ratio",
-            "osm_price",
-            "vault_uid",
-            "ilk",
-            "tx_hash",
+        vault_urns = list(queryset.values_list("urn", flat=True))
+        return (
+            UrnEventState.objects.filter(urn__in=vault_urns)
+            .annotate(
+                collateral=F("dink") / Decimal("1e18"),
+                principal=F("dart") / Decimal("1e18") * F("rate") / Decimal("1e27"),
+                before_ratio=Case(
+                    When(
+                        debt__gt=(
+                            F("dart") / Decimal("1e18") * F("rate") / Decimal("1e27")
+                        ),
+                        then=(
+                            (F("ink") - F("dink"))
+                            / Decimal("1e18")
+                            * F("collateral_price")
+                        )
+                        / (
+                            F("debt")
+                            - (
+                                F("dart")
+                                / Decimal("1e18")
+                                * F("rate")
+                                / Decimal("1e27")
+                            )
+                        )
+                        * 100,
+                    ),
+                    default=0,
+                    output_field=FloatField(),
+                ),
+                after_ratio=Case(
+                    When(
+                        debt__gt=0,
+                        then=(F("ink") / Decimal("1e18") * F("collateral_price"))
+                        / F("debt")
+                        * 100,
+                    ),
+                    default=0,
+                    output_field=FloatField(),
+                ),
+                vault_uid=Subquery(
+                    Vault.objects.filter(
+                        ilk=OuterRef("ilk"), urn=OuterRef("urn")
+                    ).values("uid")[:1]
+                ),
+            )
+            .values(
+                "datetime",
+                "operation",
+                "block_number",
+                "collateral",
+                "principal",
+                "before_ratio",
+                "after_ratio",
+                "collateral_price",
+                "vault_uid",
+                "ilk",
+                "tx_hash",
+            )
         )

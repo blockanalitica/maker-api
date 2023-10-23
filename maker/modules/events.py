@@ -2,13 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from maker.sources.cortex import fetch_cortex_urn_states
 from django_bulk_load import bulk_insert_models
 
-
-from ..models import UrnEventState
+from maker.sources.cortex import fetch_cortex_urn_states
 from maker.utils.metrics import auto_named_statsd_timer
 
+from ..models import UrnEventState
 
 # ATLAS-API DATA
 

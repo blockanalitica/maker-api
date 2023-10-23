@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from web3 import Web3
-from maker.utils.blockchain.chain import Blockchain
 
+from maker.utils.blockchain.chain import Blockchain
 
 MAKER_MCD_VAT = "0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B"
 
