@@ -207,13 +207,13 @@ def create_or_update_vaults(ilk):
             created = True
         owner = None
         if data["owner"]:
-            owner = VaultOwner.objects.get_or_create(address=data["owner"])
+            owner, _ = VaultOwner.objects.get_or_create(address=data["owner"])
 
         vault.ds_proxy_address = data["proxy"]
         vault.owner_address = data["owner"]
-        vault.owner_ens = owner.ens
-        vault.owner_name = owner.name
-        vault.is_institution = "institution" in (owner.tags or [])
+        vault.owner_ens = owner.ens if owner else None
+        vault.owner_name = owner.name if owner else None
+        vault.is_institution = "institution" in (owner.tags or []) if owner else False
         uid = data["vault"]
         if uid is None:
             uid = data["urn"][:10]
