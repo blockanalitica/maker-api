@@ -146,7 +146,6 @@ def save_ilks():
             Ilk.objects.filter(ilk=ilk).update(**ilk_data)
 
 
-
 @auto_named_statsd_timer
 def create_or_update_vaults(ilk):
     ilk_obj = Ilk.objects.get(ilk=ilk)
@@ -198,7 +197,7 @@ def create_or_update_vaults(ilk):
         "principal_change_7d",
         "principal_change_30d",
     ]
-    
+
     for data in fetch_cortext_ilk_vaults(ilk):
         try:
             vault = Vault.objects.get(urn=data["urn"], ilk=ilk)
@@ -325,7 +324,6 @@ def update_ilk_with_vaults_stats(ilk):
         total_debt=info["total_debt"] or Decimal("0"),
         vaults_count=info["vaults_count"] or 0,
     )
-
 
 
 def get_cr(lr, drop):

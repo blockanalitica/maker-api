@@ -277,7 +277,6 @@ def save_vaults_liquidation_snapshot_task():
     save_vaults_liquidation_snapshot()
 
 
-
 @app.task
 def save_backed_assets_task():
     save_assets_systemic_risk()
