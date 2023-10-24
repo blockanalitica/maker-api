@@ -22,7 +22,7 @@ def _cortex_get(url, **kwargs):
 def fetch_cortext_ilk_vaults(ilk):
     next_url = (
         f"{settings.BLOCKANALITICA_CORTEX_URL}/"
-        f"api/v1/maker/vaults/current-state?ilk={ilk}&page_size=5000"
+        f"api/v1/maker/vaults/current-state?ilk={ilk}&page_size=1000&debt_gt=0"
     )
     while next_url is not None:
         data = _cortex_get(next_url)
