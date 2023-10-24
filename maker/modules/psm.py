@@ -41,7 +41,6 @@ def claculate_and_save_psm_dai_supply():
                 , SUM(dart/1e18 * rate/1e27) as amount
             FROM maker_urneventstate
             WHERE ilk = %s
-                AND operation IN ('Boost', 'Unwind')
                 AND datetime > %s
                 AND datetime < %s
             GROUP BY 1
