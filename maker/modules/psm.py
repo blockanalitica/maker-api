@@ -38,10 +38,10 @@ def claculate_and_save_psm_dai_supply():
         sql = """
             SELECT
                 DATE_TRUNC('hour', datetime) as dt
-                , SUM(principal) as amount
-            FROM maker_rawevent
+                , SUM(dart/1e18 * rate/1e27) as amount
+            FROM maker_urneventstate
             WHERE ilk = %s
-                AND operation IN ('PAYBACK', 'GENERATE')
+                AND operation IN ('Boost', 'Unwind')
                 AND datetime > %s
                 AND datetime < %s
             GROUP BY 1

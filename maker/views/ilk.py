@@ -256,20 +256,13 @@ class IlkEventStatsView(APIView):
             SELECT
                 operation
                 , DATE_TRUNC('day', datetime) as dt
-                , CASE
-                    WHEN operation IN ('DEPOSIT', 'WITHDRAW')
-                    THEN SUM(collateral)
-                    ELSE SUM(principal)
-                  END as amount
-                , CASE
-                    WHEN operation IN ('DEPOSIT', 'WITHDRAW')
-                    THEN SUM(collateral * osm_price)
-                    ELSE SUM(principal)
-                  END as amount_usd
-            FROM maker_rawevent
+                , SUM(dart/1e18 * rate/1e27) as principal
+                , SUM(dink/1e18) as collateral
+                , SUM(dink/1e18*collateral_price) as collateral_usd
+            FROM maker_urneventstate
             WHERE datetime::date >= %s
                 AND ilk = %s
-                AND operation IN ('DEPOSIT', 'WITHDRAW', 'GENERATE', 'PAYBACK')
+                AND operation IN ('Boost', 'Borrow', 'Deposit', 'Repay', 'Unwind', 'Withdraw')
             GROUP BY 1, 2
             ORDER BY 2
         """
@@ -282,5 +275,50 @@ class IlkEventStatsView(APIView):
                 ],
             )
             events = fetch_all(cursor)
+
+        transformed_events = []
+
+        for event in events:
+            item = {"dt": event["dt"]}
+            if event["operation"] == "Boost":
+                copy = item.copy()
+                item["operation"] = "DEPOSIT"
+                item["amount"] = event["collateral"]
+                item["amount_usd"] = event["collateral_usd"]
+                copy["operation"] = "GENERATE"
+                copy["amount"] = event["principal"]
+                copy["amount_usd"] = event["principal"]
+                transformed_events.append(item)
+                transformed_events.append(copy)
+            if event["operation"] == "Unwind":
+                copy = item.copy()
+                item["operation"] = "WITHDRAW"
+                item["amount"] = event["collateral"]
+                item["amount_usd"] = event["collateral_usd"]
+                copy["operation"] = "PAYBACK"
+                copy["amount"] = event["principal"]
+                copy["amount_usd"] = event["principal"]
+                transformed_events.append(item)
+                transformed_events.append(copy)
+            if event["operation"] == "Borrow":
+                item["operation"] = "GENERATE"
+                item["amount"] = event["principal"]
+                item["amount_usd"] = event["principal"]
+                transformed_events.append(item)
+            if event["operation"] == "Repay":
+                item["operation"] = "PAYBACK"
+                item["amount"] = event["principal"]
+                item["amount_usd"] = event["principal"]
+                transformed_events.append(item)
+            if event["operation"] == "Deposit":
+                item["operation"] = "DEPOSIT"
+                item["amount"] = event["collateral"]
+                item["amount_usd"] = event["collateral_usd"]
+                transformed_events.append(item)
+            if event["operation"] == "Withdraw":
+                item["operation"] = "WITHDRAW"
+                item["amount"] = event["collateral"]
+                item["amount_usd"] = event["collateral_usd"]
+                transformed_events.append(item)
 
         return Response(events, status.HTTP_200_OK)
