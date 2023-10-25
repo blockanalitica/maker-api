@@ -303,7 +303,7 @@ class PSMsEventStatsView(APIView):
         except (TypeError, ValueError):
             return Response(None, status.HTTP_400_BAD_REQUEST)
 
-        if days_ago not in [7, 30, 90, 1000]:
+        if days_ago not in [7, 30, 90]:
             return Response(None, status.HTTP_400_BAD_REQUEST)
 
         ilks = Ilk.objects.filter(type="psm", is_active=True).values_list(

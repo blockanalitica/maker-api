@@ -1080,7 +1080,6 @@ class UrnEventState(models.Model):
     datetime = models.DateTimeField()
     tx_hash = models.CharField(max_length=66)
     order_index = models.CharField(max_length=26)
-    collateral_symbol = models.CharField(max_length=64)
     ilk = models.CharField(max_length=64)
     urn = models.CharField(max_length=42)
     operation = models.CharField(max_length=64)
