@@ -298,22 +298,10 @@ def create_or_update_vaults(ilk):
             update_field_names=updated_fields,
             pk_field_names=["urn", "ilk"],
         )
+
     if ilk_obj.type in ["asset", "lp"]:
         generate_vaults_liquidation(ilk)
     update_ilk_with_vaults_stats(ilk)
-
-    Vault.objects.exclude(datetime=dt).filter(ilk=ilk).update(
-        is_active=False,
-        debt=0,
-        collateral=0,
-        art=0,
-        liquidation_price=0,
-        collateralization=0,
-        liquidation_drop=0,
-        is_at_risk=False,
-        is_at_risk_market=False,
-        modified=datetime.utcnow(),
-    )
 
 
 def update_ilk_with_vaults_stats(ilk):

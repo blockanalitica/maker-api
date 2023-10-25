@@ -13,9 +13,19 @@ import psweep as ps
 import pytz
 from django.core.cache import cache
 from django.db.models import Avg, F, Max, Min, Q, Sum
+from django_bulk_load import bulk_insert_models
 
-from maker.models import OSM, Auction, AuctionAction
+from maker.models import (
+    OSM,
+    Auction,
+    AuctionAction,
+    AuctionV1,
+    ClipperEvent,
+    Ilk,
+    Vault,
+)
 from maker.modules.slippage import get_slippage_for_lp, get_slippage_to_dai
+from maker.sources.cortex import fetch_cortex_clipper_events
 from maker.sources.dicu import MCDSnowflake
 from maker.utils.s3 import download_csv_file_object
 
@@ -910,3 +920,96 @@ def get_ilk_auctions_per_date(ilk, dt=None):
             "recovered_debt",
         )
     )
+
+
+def save_clipper_events():
+    latest_block = ClipperEvent.latest_block_number()
+    events = fetch_cortex_clipper_events(latest_block)
+    bulk_create = []
+    for event in events:
+        bulk_create.append(ClipperEvent(**event))
+        if len(bulk_create) >= 1000:
+            bulk_insert_models(bulk_create, ignore_conflicts=True)
+            bulk_create = []
+
+    if bulk_create:
+        bulk_insert_models(bulk_create, ignore_conflicts=True)
+
+
+def process_clipper_events(block_number):
+    auctions = (
+        ClipperEvent.objects.filter(block_number__gt=block_number)
+        .order_by("ilk", "auction_id")
+        .distinct("ilk", "auction_id")
+        .values("ilk", "auction_id")
+    )
+
+    for auction in auctions:
+        obj, _ = AuctionV1.objects.get_or_create(
+            ilk=auction["ilk"], uid=auction["auction_id"]
+        )
+        kick_event = ClipperEvent.objects.get(
+            ilk=auction["ilk"], auction_id=auction["auction_id"], event="Kick"
+        )
+        try:
+            vault = Vault.objects.get(ilk=kick_event.ilk, urn=kick_event.usr.lower())
+            obj.symbol = vault.collateral_symbol
+            obj.vault = vault.uid
+            obj.urn = vault.urn
+        except Vault.DoesNotExist:
+            ilk_obj = Ilk.objects.get(ilk=kick_event.ilk)
+            obj.symbol = ilk_obj.collateral
+            obj.vault = None
+            obj.urn = kick_event.usr.lower()
+
+        obj.penalty = kick_event.penalty / Decimal("1e18")
+
+        obj.penalty_fee = (kick_event.tab / Decimal("1e45")) - (
+            kick_event.tab / Decimal("1e45") / obj.penalty
+        )
+        obj.incentive = kick_event.coin / Decimal("1e45")
+        obj.auction_start = kick_event.datetime
+        obj.kicked_collateral = kick_event.lot / Decimal("1e18")
+        obj.available_collateral = kick_event.lot / Decimal("1e18")
+
+        obj.debt = kick_event.tab / Decimal("1e45")
+        obj.debt_liquidated = obj.debt - obj.penalty_fee
+
+        take_events = (
+            ClipperEvent.objects.filter(
+                ilk=auction["ilk"], auction_id=auction["auction_id"], event="Take"
+            )
+            .annotate(
+                osm_settled=(F("price") / Decimal("1e27") / F("osm_price")) - 1,
+                mkt_settled=(F("price") / Decimal("1e27") / F("osm_price")) - 1,
+            )
+            .aggregate(
+                recovered_debt=Sum("owe"),
+                recovered_collateral=Sum("lot"),
+                avg_price=Avg("price"),
+                avg_osm_price=Avg("osm_settled"),
+            )
+        )
+
+        obj.sold_collateral = obj.kicked_collateral - (
+            take_events["recovered_collateral"] / Decimal("1e18")
+        )
+        obj.available_collateral = obj.kicked_collateral - obj.sold_collateral
+        obj.recovered_debt = take_events["recovered_debt"] / Decimal("1e45")
+
+        obj.finished = obj.recovered_debt == obj.debt
+        if obj.finished:
+            obj.auction_end = (
+                ClipperEvent.objects.filter(
+                    ilk=auction["ilk"], auction_id=auction["auction_id"], event="Take"
+                )
+                .latest()
+                .datetime
+            )
+            obj.duration = (obj.auction_end - obj.auction_start).seconds / 60
+
+        obj.avg_price = take_events["avg_price"] / Decimal("1e27")
+        obj.osm_settled_avg = take_events["avg_osm_price"]
+        obj.mkt_settled_avg = take_events["avg_osm_price"]
+
+        obj.save()

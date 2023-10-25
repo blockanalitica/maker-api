@@ -1133,3 +1133,71 @@ class UrnEventState(models.Model):
             art = 0
             ink = 0
         return ink, art
+
+
+class ClipperEvent(TimeStampedModel):
+    block_number = models.IntegerField()
+    datetime = models.DateTimeField(null=True)
+    tx_hash = models.CharField(max_length=66)
+    address = models.CharField(max_length=42)
+    event = models.CharField(max_length=64)
+    ilk = models.CharField(max_length=64)
+    auction_id = models.IntegerField()
+    top = models.DecimalField(max_digits=64, decimal_places=0, null=True)
+    tab = models.DecimalField(max_digits=64, decimal_places=0)
+    lot = models.DecimalField(max_digits=64, decimal_places=0)
+    usr = models.CharField(max_length=42)
+    kpr = models.CharField(max_length=42, null=True)
+    coin = models.DecimalField(max_digits=64, decimal_places=0, null=True)
+    max = models.DecimalField(max_digits=128, decimal_places=0, null=True)  # noqa:A003
+    price = models.DecimalField(max_digits=48, decimal_places=0, null=True)
+    osm_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    owe = models.DecimalField(max_digits=64, decimal_places=0, null=True)
+    order_index = models.CharField(max_length=26, unique=True)
+    penalty = models.DecimalField(max_digits=32, decimal_places=0, null=True)
+
+    class Meta:
+        get_latest_by = "order_index"
+        ordering = ["order_index"]
+        indexes = [
+            models.Index(fields=["order_index"]),
+            models.Index(fields=["block_number"]),
+            models.Index(fields=["datetime"]),
+            models.Index(fields=["event"]),
+            models.Index(fields=["address"]),
+            models.Index(fields=["ilk", "auction_id"]),
+        ]
+
+    @classmethod
+    def latest_block_number(cls):
+        try:
+            return cls.objects.latest().block_number
+        except cls.DoesNotExist:
+            return 8928155
+
+
+class AuctionV1(TimeStampedModel):
+    ilk = models.CharField(max_length=32, db_index=True)
+    symbol = models.CharField(max_length=32, null=True)
+    uid = models.IntegerField()
+    auction_start = models.DateTimeField(null=True)
+    vault = models.CharField(max_length=32, null=True)
+    urn = models.CharField(max_length=64, null=True)
+    debt = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    debt_liquidated = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    available_collateral = models.DecimalField(
+        max_digits=32, decimal_places=18, null=True
+    )
+    kicked_collateral = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    penalty = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    penalty_fee = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    sold_collateral = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    recovered_debt = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    auction_end = models.DateTimeField(null=True)
+    finished = models.IntegerField(null=True)
+    duration = models.IntegerField(null=True)
+    avg_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    incentive = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+
+    osm_settled_avg = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    mkt_settled_avg = models.DecimalField(max_digits=32, decimal_places=18, null=True)
