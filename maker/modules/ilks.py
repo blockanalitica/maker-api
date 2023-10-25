@@ -377,4 +377,3 @@ def generate_vaults_liquidation(ilk):
                     "debt": vaults["debt"] or 0,
                 },
             )
-

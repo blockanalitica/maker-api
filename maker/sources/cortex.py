@@ -19,7 +19,6 @@ def _cortex_get(url, **kwargs):
     return data
 
 
-
 def fetch_cortex_ilk_vaults(ilk):
     next_url = (
         f"{settings.BLOCKANALITICA_CORTEX_URL}/"
