@@ -964,16 +964,17 @@ def process_clipper_events(block_number):
 
         obj.penalty = kick_event.penalty / Decimal("1e18")
 
-        obj.penalty_fee = (kick_event.tab / Decimal("1e45")) - (
-            kick_event.tab / Decimal("1e45") / obj.penalty
-        )
+       
         obj.incentive = kick_event.coin / Decimal("1e45")
         obj.auction_start = kick_event.datetime
         obj.kicked_collateral = kick_event.lot / Decimal("1e18")
         obj.available_collateral = kick_event.lot / Decimal("1e18")
 
-        obj.debt = kick_event.tab / Decimal("1e45")
-        obj.debt_liquidated = obj.debt - obj.penalty_fee
+        penalty_fee = (kick_event.tab / Decimal("1e45")) - (
+            kick_event.tab / Decimal("1e45") / obj.penalty
+        )
+        start_debt = kick_event.tab / Decimal("1e45")
+        obj.debt_liquidated = start_debt - penalty_fee
 
         take_events = (
             ClipperEvent.objects.filter(
@@ -985,19 +986,23 @@ def process_clipper_events(block_number):
             )
             .aggregate(
                 recovered_debt=Sum("owe"),
-                recovered_collateral=Sum("lot"),
-                avg_price=Avg("price"),
+                sold_collateral=Sum(F("owe") / Decimal("1e45")  / (F("price") / Decimal("1e27"))),
                 avg_osm_price=Avg("osm_settled"),
             )
         )
 
-        obj.sold_collateral = obj.kicked_collateral - (
-            take_events["recovered_collateral"] / Decimal("1e18")
-        )
-        obj.available_collateral = obj.kicked_collateral - obj.sold_collateral
+        obj.sold_collateral = take_events["sold_collateral"] 
+        obj.available_collateral = max(obj.kicked_collateral - obj.sold_collateral, 0)
         obj.recovered_debt = take_events["recovered_debt"] / Decimal("1e45")
+        obj.avg_price = obj.recovered_debt / obj.sold_collateral
+        obj.osm_settled_avg = take_events["avg_osm_price"]
+        obj.mkt_settled_avg = take_events["avg_osm_price"]
 
-        obj.finished = obj.recovered_debt == obj.debt
+        obj.debt  = start_debt - obj.recovered_debt
+
+        obj.penalty_fee = penalty_fee - obj.debt
+
+        obj.finished = obj.debt == max(0, obj.debt) or datetime.now() - timedelta(hours=2) > obj.auction_start
         if obj.finished:
             obj.auction_end = (
                 ClipperEvent.objects.filter(
@@ -1007,9 +1012,4 @@ def process_clipper_events(block_number):
                 .datetime
             )
             obj.duration = (obj.auction_end - obj.auction_start).seconds / 60
-
-        obj.avg_price = take_events["avg_price"] / Decimal("1e27")
-        obj.osm_settled_avg = take_events["avg_osm_price"]
-        obj.mkt_settled_avg = take_events["avg_osm_price"]
-
         obj.save()
