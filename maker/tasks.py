@@ -109,9 +109,6 @@ SCHEDULE = {
     "save_asset_market_caps_task": {
         "schedule": crontab(minute="*/30"),
     },
-    "sync_vaults_events_task": {
-        "schedule": crontab(minute="*/30"),
-    },
     # "get_slippage_for_slippage_pairs": {
     #     "schedule": crontab(minute="15", hour="3,9,15,21"),
     # },
@@ -309,6 +306,7 @@ def check_to_sync_vaults():
     # if Vault.objects.filter(block_number=block_number).count() > 0:
     #     log.info("Skiping sync_vaults for block_number %s", block_number)
     #     return
+    save_urn_event_states.delay()
     sync_vaults_task.delay()
     sync_auctions_task.delay()
 
@@ -320,11 +318,6 @@ def sync_vaults_task():
         sync_ilk_vaults_task.apply_async(args=(ilk,), countdown=idx * 2)
 
     claculate_and_save_psm_dai_supply_task.delay()
-
-
-@app.task
-def sync_vaults_events_task():
-    save_urn_event_states()
 
 
 @app.task
