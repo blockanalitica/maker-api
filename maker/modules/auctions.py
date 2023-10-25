@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import contextlib
 import math
 from collections import defaultdict
 from copy import deepcopy
@@ -12,6 +13,7 @@ import numpy as np
 import psweep as ps
 import pytz
 from django.core.cache import cache
+from django.db import IntegrityError
 from django.db.models import Avg, F, Max, Min, Q, Sum
 from django_bulk_load import bulk_insert_models
 
@@ -19,6 +21,7 @@ from maker.models import (
     OSM,
     Auction,
     AuctionAction,
+    AuctionEvent,
     AuctionV1,
     ClipperEvent,
     Ilk,
@@ -1017,3 +1020,42 @@ def process_clipper_events(block_number):
             )
             obj.duration = (obj.auction_end - obj.auction_start).seconds / 60
         obj.save()
+
+        for clipper_event in ClipperEvent.objects.filter(
+            ilk=auction["ilk"], auction_id=auction["auction_id"]
+        ):
+            with contextlib.suppress(IntegrityError):
+                AuctionEvent.objects.create(
+                    auction=obj,
+                    ilk=clipper_event.ilk,
+                    auction_uid=clipper_event.auction_id,
+                    datetime=clipper_event.datetime,
+                    block_number=clipper_event.block_number,
+                    tx_hash=clipper_event.tx_hash,
+                    order_index=clipper_event.order_index,
+                    urn=clipper_event.usr.lower(),
+                    debt=clipper_event.owe / Decimal("1e45")
+                    if clipper_event.owe
+                    else None,
+                    available_collateral=clipper_event.lot / Decimal("1e18"),
+                    sold_collateral=(clipper_event.owe / Decimal("1e45"))
+                    / (clipper_event.price / Decimal("1e27"))
+                    if clipper_event.owe
+                    else None,
+                    recovered_debt=clipper_event.owe / Decimal("1e45")
+                    if clipper_event.owe
+                    else None,
+                    type=clipper_event.event.lower(),
+                    collateral_price=clipper_event.price / Decimal("1e27")
+                    if clipper_event.price
+                    else None,
+                    init_price=clipper_event.top / Decimal("1e27")
+                    if clipper_event.top
+                    else None,
+                    osm_price=clipper_event.osm_price if clipper_event.osm_price else 1,
+                    mkt_price=clipper_event.osm_price if clipper_event.osm_price else 1,
+                    keeper=clipper_event.kpr,
+                    incentives=clipper_event.coin / Decimal("1e45")
+                    if clipper_event.coin
+                    else None,
+                )

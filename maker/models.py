@@ -1201,3 +1201,37 @@ class AuctionV1(TimeStampedModel):
 
     osm_settled_avg = models.DecimalField(max_digits=32, decimal_places=18, null=True)
     mkt_settled_avg = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+
+
+class AuctionEvent(TimeStampedModel):
+    order_index = models.CharField(max_length=26, unique=True)
+    auction_uid = models.IntegerField(null=True)
+    auction = models.ForeignKey(
+        AuctionV1, on_delete=models.CASCADE, related_name="actions", null=True
+    )
+    ilk = models.CharField(max_length=32)
+    datetime = models.DateTimeField(null=True)
+    debt = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    available_collateral = models.DecimalField(
+        max_digits=32, decimal_places=18, null=True
+    )
+
+    sold_collateral = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    recovered_debt = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    type = models.CharField(max_length=16)
+    collateral_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    init_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    osm_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    mkt_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+
+    keeper = models.CharField(max_length=64, null=True)
+    incentives = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    caller = models.CharField(max_length=64, null=True)
+
+    tx_hash = models.CharField(max_length=128, null=True)
+    urn = models.CharField(max_length=42, null=True)
+    block_number = models.BigIntegerField(null=True)
+
+    class Meta:
+        get_latest_by = "order_index"
+        ordering = ["order_index"]
