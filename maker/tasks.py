@@ -306,7 +306,7 @@ def check_to_sync_vaults():
     # if Vault.objects.filter(block_number=block_number).count() > 0:
     #     log.info("Skiping sync_vaults for block_number %s", block_number)
     #     return
-    save_urn_event_states.delay()
+    save_urn_event_states()
     sync_vaults_task.delay()
     sync_auctions_task.delay()
 
