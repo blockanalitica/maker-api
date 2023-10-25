@@ -147,7 +147,7 @@ def save_ilks():
 
 
 @auto_named_statsd_timer
-def create_or_update_vaults(ilk, force=False):
+def create_or_update_vaults(ilk):
     ilk_obj = Ilk.objects.get(ilk=ilk)
     market_price = None
     if ilk_obj.type == "asset":
@@ -198,7 +198,7 @@ def create_or_update_vaults(ilk, force=False):
         "principal_change_30d",
     ]
 
-    for data in fetch_cortex_ilk_vaults(ilk, force=force):
+    for data in fetch_cortex_ilk_vaults(ilk):
         try:
             vault = Vault.objects.get(urn=data["urn"], ilk=ilk)
             created = False
@@ -299,8 +299,6 @@ def create_or_update_vaults(ilk, force=False):
             pk_field_names=["urn", "ilk"],
         )
 
-    if force is True:
-        return
     if ilk_obj.type in ["asset", "lp"]:
         generate_vaults_liquidation(ilk)
     update_ilk_with_vaults_stats(ilk)
@@ -380,8 +378,3 @@ def generate_vaults_liquidation(ilk):
                 },
             )
 
-
-def force_all_vaults():
-    ilks = Ilk.objects.all().values_list("ilk", flat=True)
-    for ilk in ilks:
-        create_or_update_vaults(ilk=ilk, force=True)
