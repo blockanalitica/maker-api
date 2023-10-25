@@ -6,11 +6,13 @@ from decimal import Decimal
 
 from django_bulk_load import bulk_insert_models, bulk_update_models
 
+from maker.sources.cortex import fetch_cortex_urn_states
+
 # from maker.modules.vaults import save_vault_changes
 from maker.utils.metrics import auto_named_statsd_timer
 from maker.utils.utils import calculate_rate
 
-from ..models import OSM, Ilk, RawEvent, Vault, VaultEventState
+from ..models import OSM, Ilk, RawEvent, UrnEventState, Vault, VaultEventState
 from ..sources.dicu import MCDSnowflake
 
 
@@ -394,3 +396,17 @@ def sync_vault_event_balances(from_block):
         ],
         pk_field_names=["id"],
     )
+
+
+def save_urn_event_states():
+    latest_block = UrnEventState.latest_block_number()
+    urn_states_data = fetch_cortex_urn_states(latest_block)
+    bulk_create = []
+    for urn_state in urn_states_data:
+        bulk_create.append(UrnEventState(**urn_state))
+        if len(bulk_create) >= 1000:
+            bulk_insert_models(bulk_create, ignore_conflicts=True)
+            bulk_create = []
+
+    if bulk_create:
+        bulk_insert_models(bulk_create, ignore_conflicts=True)

@@ -1073,3 +1073,63 @@ class WalletExternalProtocol(models.Model):
 
     class Meta:
         get_latest_by = "datetime"
+
+
+class UrnEventState(models.Model):
+    block_number = models.IntegerField()
+    datetime = models.DateTimeField()
+    tx_hash = models.CharField(max_length=66)
+    order_index = models.CharField(max_length=26)
+    ilk = models.CharField(max_length=64)
+    urn = models.CharField(max_length=42)
+    operation = models.CharField(max_length=64)
+    event = models.CharField(max_length=64)
+    ink = models.DecimalField(max_digits=48, decimal_places=0, default=0)
+    art = models.DecimalField(max_digits=48, decimal_places=0)
+    dart = models.DecimalField(max_digits=48, decimal_places=0)
+    dink = models.DecimalField(max_digits=48, decimal_places=0)
+    rate = models.DecimalField(max_digits=48, decimal_places=0, default=0)
+    debt = models.DecimalField(max_digits=32, decimal_places=18)
+    collateral_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+
+    class Meta:
+        get_latest_by = "order_index"
+        ordering = ["order_index"]
+        unique_together = [
+            "urn",
+            "ilk",
+            "order_index",
+        ]
+        indexes = [
+            models.Index(fields=["ilk", "urn"]),
+            models.Index(fields=["block_number"]),
+            models.Index(fields=["ilk"]),
+            models.Index(fields=["urn"]),
+            models.Index(fields=["order_index"]),
+            models.Index(fields=["urn", "ilk", "order_index"]),
+        ]
+
+    @classmethod
+    def latest_urn_block_number(cls, urn, ilk):
+        try:
+            return cls.objects.filter(urn=urn, ilk=ilk).latest().block_number
+        except cls.DoesNotExist:
+            return 8928155
+
+    @classmethod
+    def latest_block_number(cls):
+        try:
+            return cls.objects.latest().block_number
+        except cls.DoesNotExist:
+            return 8928155
+
+    @classmethod
+    def latest_position(cls, urn, ilk):
+        try:
+            latest_position = cls.objects.filter(urn=urn, ilk=ilk).latest()
+            art = latest_position.art
+            ink = latest_position.ink
+        except cls.DoesNotExist:
+            art = 0
+            ink = 0
+        return ink, art
