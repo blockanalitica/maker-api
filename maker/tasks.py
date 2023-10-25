@@ -44,7 +44,7 @@ from .modules.discord import (
 )
 from .modules.events import save_urn_event_states
 from .modules.ilk import save_stats_for_vault
-from .modules.ilks import create_or_update_vaults, save_ilks, sync_vaults_with_defisaver
+from .modules.ilks import create_or_update_vaults, save_ilks
 from .modules.liquidations import (
     save_maker_liquidations,
     save_vaults_liquidation_snapshot,
@@ -79,9 +79,6 @@ log = logging.getLogger(__name__)
 
 
 SCHEDULE = {
-    "sync_vaults_with_defisaver_task": {
-        "schedule": crontab(minute="*/1"),
-    },
     "get_gas_task": {
         "schedule": crontab(minute="*/1"),
     },
@@ -278,11 +275,6 @@ def fetch_defi_balance_task():
 @app.task
 def save_vaults_liquidation_snapshot_task():
     save_vaults_liquidation_snapshot()
-
-
-@app.task
-def sync_vaults_with_defisaver_task():
-    sync_vaults_with_defisaver()
 
 
 @app.task
