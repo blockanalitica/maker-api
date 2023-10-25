@@ -147,7 +147,7 @@ def save_ilks():
 
 
 @auto_named_statsd_timer
-def create_or_update_vaults(ilk):
+def create_or_update_vaults(ilk, force=False):
     ilk_obj = Ilk.objects.get(ilk=ilk)
     market_price = None
     if ilk_obj.type == "asset":
@@ -198,7 +198,7 @@ def create_or_update_vaults(ilk):
         "principal_change_30d",
     ]
 
-    for data in fetch_cortext_ilk_vaults(ilk):
+    for data in fetch_cortext_ilk_vaults(ilk, force=force):
         try:
             vault = Vault.objects.get(urn=data["urn"], ilk=ilk)
             created = False
@@ -298,23 +298,12 @@ def create_or_update_vaults(ilk):
             update_field_names=updated_fields,
             pk_field_names=["urn", "ilk"],
         )
+
+    if force is True:
+        return
     if ilk_obj.type in ["asset", "lp"]:
         generate_vaults_liquidation(ilk)
     update_ilk_with_vaults_stats(ilk)
-
-    Vault.objects.exclude(datetime=dt).filter(ilk=ilk).update(
-        is_active=False,
-        debt=0,
-        collateral=0,
-        art=0,
-        liquidation_price=0,
-        collateralization=0,
-        liquidation_drop=0,
-        is_at_risk=False,
-        is_at_risk_market=False,
-        modified=datetime.utcnow(),
-    )
-
 
 def update_ilk_with_vaults_stats(ilk):
     info = Vault.objects.filter(ilk=ilk, is_active=True).aggregate(
@@ -389,3 +378,10 @@ def generate_vaults_liquidation(ilk):
                     "debt": vaults["debt"] or 0,
                 },
             )
+
+
+
+def force_all_vaults():
+    ilks = Ilk.objects.all().values_list("ilk", flat=True)
+    for ilk in ilks:
+        create_or_update_vaults(ilk=ilk, force=True)

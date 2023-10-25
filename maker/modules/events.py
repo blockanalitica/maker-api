@@ -6,21 +6,13 @@ from decimal import Decimal
 
 from django_bulk_load import bulk_insert_models, bulk_update_models
 
-from maker.sources.cortex import fetch_cortex_clipper_events, fetch_cortex_urn_states
+from maker.sources.cortex import fetch_cortex_urn_states
 
 # from maker.modules.vaults import save_vault_changes
 from maker.utils.metrics import auto_named_statsd_timer
 from maker.utils.utils import calculate_rate
 
-from ..models import (
-    OSM,
-    ClipperEvent,
-    Ilk,
-    RawEvent,
-    UrnEventState,
-    Vault,
-    VaultEventState,
-)
+from ..models import OSM, Ilk, RawEvent, UrnEventState, Vault, VaultEventState
 from ..sources.dicu import MCDSnowflake
 
 
@@ -421,15 +413,3 @@ def save_urn_event_states():
 
 
 
-def save_clipper_events():
-    latest_block = ClipperEvent.latest_block_number()
-    events = fetch_cortex_clipper_events(latest_block)
-    bulk_create = []
-    for event in events:
-        bulk_create.append(ClipperEvent(**event))
-        if len(bulk_create) >= 1000:
-            bulk_insert_models(bulk_create, ignore_conflicts=True)
-            bulk_create = []
-
-    if bulk_create:
-        bulk_insert_models(bulk_create, ignore_conflicts=True)

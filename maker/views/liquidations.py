@@ -20,7 +20,7 @@ from maker.modules.liquidations import get_liquidations_per_drop_data
 from maker.modules.slippage import get_slippage_for_lp, get_slippage_to_dai
 from maker.utils.views import PaginatedApiView
 
-from ..models import Auction, AuctionAction, Ilk
+from ..models import Auction, AuctionAction, AuctionV1, Ilk
 from ..modules.auctions import (
     get_auction,
     get_auction_dur_stats,
@@ -430,7 +430,7 @@ class LiquidationsPerDateView(PaginatedApiView):
 
     def get_queryset(self, search_filters, query_params, **kwargs):
         return (
-            Auction.objects.annotate(
+            AuctionV1.objects.annotate(
                 auction_date=Func(F("auction_start"), function="DATE")
             )
             .values("auction_date")
@@ -465,7 +465,7 @@ class LiquidationsPerDateIlksView(PaginatedApiView):
 
     def get_queryset(self, search_filters, query_params, **kwargs):
         return (
-            Auction.objects.filter(auction_start__date=kwargs["date"])
+            AuctionV1.objects.filter(auction_start__date=kwargs["date"])
             .values("ilk")
             .annotate(
                 total_auctions=Count("id"),
@@ -501,7 +501,7 @@ class LiquidationsPerDateIlkView(PaginatedApiView):
 
     def get_queryset(self, search_filters, query_params, **kwargs):
         return (
-            Auction.objects.filter(
+            AuctionV1.objects.filter(
                 ilk=kwargs["ilk"], auction_start__date=kwargs["date"]
             )
             .annotate(
@@ -550,7 +550,7 @@ class LiquidationsPerIlksView(PaginatedApiView):
 
     def get_queryset(self, search_filters, query_params, **kwargs):
         return (
-            Auction.objects.values("ilk")
+            AuctionV1.objects.values("ilk")
             .annotate(
                 total_auctions=Count("id"),
                 total_debt=Sum("debt_liquidated"),
@@ -585,7 +585,7 @@ class LiquidationsPerIlkView(PaginatedApiView):
 
     def get_queryset(self, search_filters, query_params, **kwargs):
         return (
-            Auction.objects.filter(ilk=kwargs["ilk"])
+            AuctionV1.objects.filter(ilk=kwargs["ilk"])
             .annotate(
                 penalty_fee_per=F("penalty_fee") / F("debt_liquidated"),
                 coll_returned=(F("available_collateral") / F("kicked_collateral")),

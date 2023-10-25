@@ -1175,3 +1175,29 @@ class ClipperEvent(TimeStampedModel):
             return cls.objects.latest().block_number
         except cls.DoesNotExist:
             return 8928155
+        
+class AuctionV1(TimeStampedModel):
+    ilk = models.CharField(max_length=32, db_index=True)
+    symbol = models.CharField(max_length=32, null=True)
+    uid = models.IntegerField()
+    auction_start = models.DateTimeField(null=True)
+    vault = models.CharField(max_length=32, null=True)
+    urn = models.CharField(max_length=64, null=True)
+    debt = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    debt_liquidated = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    available_collateral = models.DecimalField(
+        max_digits=32, decimal_places=18, null=True
+    )
+    kicked_collateral = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    penalty = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    penalty_fee = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    sold_collateral = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    recovered_debt = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    auction_end = models.DateTimeField(null=True)
+    finished = models.IntegerField(null=True)
+    duration = models.IntegerField(null=True)
+    avg_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    incentive = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+
+    osm_settled_avg = models.DecimalField(max_digits=32, decimal_places=18, null=True)
+    mkt_settled_avg = models.DecimalField(max_digits=32, decimal_places=18, null=True)

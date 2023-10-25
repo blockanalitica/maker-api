@@ -19,11 +19,13 @@ def _cortex_get(url, **kwargs):
     return data
 
 
-def fetch_cortext_ilk_vaults(ilk):
+def fetch_cortext_ilk_vaults(ilk, force=False):
     next_url = (
         f"{settings.BLOCKANALITICA_CORTEX_URL}/"
-        f"api/v1/maker/vaults/current-state?ilk={ilk}&page_size=5000&diff=1"
+        f"api/v1/maker/vaults/current-state?ilk={ilk}&page_size=5000"
     )
+    if force is False:
+        next_url += "&diff=1"
     while next_url is not None:
         data = _cortex_get(next_url)
         if data["next_page_uri"]:
