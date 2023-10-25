@@ -67,4 +67,3 @@ def fetch_cortex_clipper_events(block_number):
 
         for vault in data["results"]:
             yield vault
-

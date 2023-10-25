@@ -13,7 +13,7 @@ import psweep as ps
 import pytz
 from django.core.cache import cache
 from django.db.models import Avg, F, Max, Min, Q, Sum
-from django_bulk_load import bulk_insert_models, bulk_update_models
+from django_bulk_load import bulk_insert_models
 
 from maker.models import (
     OSM,
@@ -922,7 +922,6 @@ def get_ilk_auctions_per_date(ilk, dt=None):
     )
 
 
-
 def save_clipper_events():
     latest_block = ClipperEvent.latest_block_number()
     events = fetch_cortex_clipper_events(latest_block)
@@ -937,13 +936,21 @@ def save_clipper_events():
         bulk_insert_models(bulk_create, ignore_conflicts=True)
 
 
-
 def process_clipper_events(block_number):
-    auctions = ClipperEvent.objects.filter(block_number__gt=block_number).order_by("ilk", "auction_id").distinct("ilk", "auction_id").values("ilk", "auction_id")
+    auctions = (
+        ClipperEvent.objects.filter(block_number__gt=block_number)
+        .order_by("ilk", "auction_id")
+        .distinct("ilk", "auction_id")
+        .values("ilk", "auction_id")
+    )
 
     for auction in auctions:
-        obj, _ = AuctionV1.objects.get_or_create(ilk=auction["ilk"], uid=auction["auction_id"])
-        kick_event = ClipperEvent.objects.get(ilk=auction["ilk"], auction_id=auction["auction_id"], event="Kick")
+        obj, _ = AuctionV1.objects.get_or_create(
+            ilk=auction["ilk"], uid=auction["auction_id"]
+        )
+        kick_event = ClipperEvent.objects.get(
+            ilk=auction["ilk"], auction_id=auction["auction_id"], event="Kick"
+        )
         try:
             vault = Vault.objects.get(ilk=kick_event.ilk, urn=kick_event.usr.lower())
             obj.symbol = vault.collateral_symbol
@@ -955,64 +962,56 @@ def process_clipper_events(block_number):
             obj.vault = None
             obj.urn = kick_event.usr.lower()
 
-
         obj.penalty = kick_event.penalty / Decimal("1e18")
 
-        obj.penalty_fee = (kick_event.tab / Decimal("1e45")) - (kick_event.tab / Decimal("1e45") / obj.penalty)
-        obj.incentive = kick_event.coin  / Decimal("1e45")
+        obj.penalty_fee = (kick_event.tab / Decimal("1e45")) - (
+            kick_event.tab / Decimal("1e45") / obj.penalty
+        )
+        obj.incentive = kick_event.coin / Decimal("1e45")
         obj.auction_start = kick_event.datetime
         obj.kicked_collateral = kick_event.lot / Decimal("1e18")
         obj.available_collateral = kick_event.lot / Decimal("1e18")
-        
-        obj.debt  = kick_event.tab / Decimal("1e45")
+
+        obj.debt = kick_event.tab / Decimal("1e45")
         obj.debt_liquidated = obj.debt - obj.penalty_fee
 
-        take_events = ClipperEvent.objects.filter(ilk=auction["ilk"], auction_id=auction["auction_id"], event="Take").annotate(
-            osm_settled=(F("price") /  Decimal("1e27") / F("osm_price")) - 1,
-            mkt_settled=(F("price") /  Decimal("1e27") / F("osm_price")) - 1,
-        ).aggregate(recovered_debt=Sum("owe"), recovered_collateral=Sum("lot"), avg_price=Avg("price"), avg_osm_price=Avg("osm_settled"))
+        take_events = (
+            ClipperEvent.objects.filter(
+                ilk=auction["ilk"], auction_id=auction["auction_id"], event="Take"
+            )
+            .annotate(
+                osm_settled=(F("price") / Decimal("1e27") / F("osm_price")) - 1,
+                mkt_settled=(F("price") / Decimal("1e27") / F("osm_price")) - 1,
+            )
+            .aggregate(
+                recovered_debt=Sum("owe"),
+                recovered_collateral=Sum("lot"),
+                avg_price=Avg("price"),
+                avg_osm_price=Avg("osm_settled"),
+            )
+        )
 
-        obj.sold_collateral = obj.kicked_collateral - (take_events["recovered_collateral"] / Decimal("1e18"))
+        obj.sold_collateral = obj.kicked_collateral - (
+            take_events["recovered_collateral"] / Decimal("1e18")
+        )
         obj.available_collateral = obj.kicked_collateral - obj.sold_collateral
-        obj.recovered_debt = (take_events["recovered_debt"] / Decimal("1e45"))
-
-        
+        obj.recovered_debt = take_events["recovered_debt"] / Decimal("1e45")
 
         obj.finished = obj.recovered_debt == obj.debt
         if obj.finished:
-            obj.auction_end = ClipperEvent.objects.filter(ilk=auction["ilk"], auction_id=auction["auction_id"], event="Take").latest().datetime
+            obj.auction_end = (
+                ClipperEvent.objects.filter(
+                    ilk=auction["ilk"], auction_id=auction["auction_id"], event="Take"
+                )
+                .latest()
+                .datetime
+            )
             obj.duration = (obj.auction_end - obj.auction_start).seconds / 60
 
         obj.avg_price = take_events["avg_price"] / Decimal("1e27")
-        obj.osm_settled_avg = take_events["avg_osm_price"] 
-        obj.mkt_settled_avg = take_events["avg_osm_price"] 
-
-
+        obj.osm_settled_avg = take_events["avg_osm_price"]
+        obj.mkt_settled_avg = take_events["avg_osm_price"]
 
         obj.save()
-        print(obj.__dict__)
 
-# class AuctionV1(TimeStampedModel):
-#     ilk = models.CharField(max_length=32, db_index=True)
-#     symbol = models.CharField(max_length=32, null=True)
-#     auction_id = models.IntegerField()
-#     auction_start = models.DateTimeField(null=True)
-#     vault = models.CharField(max_length=32, null=True)
-#     urn = models.CharField(max_length=64, null=True)
-#     debt = models.DecimalField(max_digits=32, decimal_places=18, null=True)
-#     debt_liquidated = models.DecimalField(max_digits=32, decimal_places=18, null=True)
-#     available_collateral = models.DecimalField(
-#         max_digits=32, decimal_places=18, null=True
-#     )
-#     kicked_collateral = models.DecimalField(max_digits=32, decimal_places=18, null=True)
-#     penalty = models.DecimalField(max_digits=32, decimal_places=18, null=True)
-#     penalty_fee = models.DecimalField(max_digits=32, decimal_places=18, null=True)
-#     sold_collateral = models.DecimalField(max_digits=32, decimal_places=18, null=True)
-#     recovered_debt = models.DecimalField(max_digits=32, decimal_places=18, null=True)
-#     auction_end = models.DateTimeField(null=True)
-#     finished = models.IntegerField(null=True)
-#     duration = models.IntegerField(null=True)
-#     avg_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
 
-#     osm_settled_avg = models.DecimalField(max_digits=32, decimal_places=18, null=True)
-#     mkt_settled_avg = models.DecimalField(max_digits=32, decimal_places=18, null=True)

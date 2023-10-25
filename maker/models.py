@@ -1135,7 +1135,6 @@ class UrnEventState(models.Model):
         return ink, art
 
 
-
 class ClipperEvent(TimeStampedModel):
     block_number = models.IntegerField()
     datetime = models.DateTimeField(null=True)
@@ -1175,7 +1174,8 @@ class ClipperEvent(TimeStampedModel):
             return cls.objects.latest().block_number
         except cls.DoesNotExist:
             return 8928155
-        
+
+
 class AuctionV1(TimeStampedModel):
     ilk = models.CharField(max_length=32, db_index=True)
     symbol = models.CharField(max_length=32, null=True)

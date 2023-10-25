@@ -305,6 +305,7 @@ def create_or_update_vaults(ilk, force=False):
         generate_vaults_liquidation(ilk)
     update_ilk_with_vaults_stats(ilk)
 
+
 def update_ilk_with_vaults_stats(ilk):
     info = Vault.objects.filter(ilk=ilk, is_active=True).aggregate(
         total_debt=Sum("debt"), vaults_count=Count("id")
@@ -378,7 +379,6 @@ def generate_vaults_liquidation(ilk):
                     "debt": vaults["debt"] or 0,
                 },
             )
-
 
 
 def force_all_vaults():

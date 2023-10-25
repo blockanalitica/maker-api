@@ -410,6 +410,3 @@ def save_urn_event_states():
 
     if bulk_create:
         bulk_insert_models(bulk_create, ignore_conflicts=True)
-
-
-
