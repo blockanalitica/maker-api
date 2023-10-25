@@ -770,7 +770,7 @@ def sync_auctions(backpopulate=False):
 
 
 def get_auction(ilk, auction_uid):
-    auction = AuctionV1.objects.get(ilk=ilk, uid=auction_uid)
+    auction = Auction.objects.get(ilk=ilk, uid=auction_uid)
 
     auction_data = {
         "ilk": auction.ilk,
