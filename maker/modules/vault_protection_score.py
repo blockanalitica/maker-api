@@ -82,29 +82,26 @@ def get_protection_score_data():
 
     df_cr_increase_actions = run_query(
         """
-
-
     select
-        vault_uid as vault
+        a.urn
         , a.ilk
         , b.collateral as collateral_asset
-        , date_trunc('day', to_timestamp(a.timestamp)) as report_date
+        , date_trunc('day',CAST(a.datetime AS TIMESTAMP)) as report_date
         , count(*) as cr_increase_actions
     from
-        maker_vaulteventstate a
+        maker_urneventstate a
     join
         maker_ilk b
     on
         a.ilk = b.ilk
     where
-        after_ratio > before_ratio
+        a.dink/1e18*a.collateral_price > a.dart/1e18
     and
         type in ('asset', 'lp')
     group by 1,2,3,4
     order by 5 desc
     """
     )
-
     df_annualized_volatility = run_query(
         """
     with
@@ -151,7 +148,7 @@ def get_protection_score_data():
         >= pd.to_datetime(datetime.now() - timedelta(30))
     ]
     df_volatility_actions = (
-        df_volatility_actions.groupby(["vault", "ilk", "collateral_asset"])
+        df_volatility_actions.groupby(["urn", "ilk", "collateral_asset"])
         .sum()
         .reset_index()
     )
@@ -223,17 +220,19 @@ def get_protection_score_data():
     # number of unique price drop days protecting
     df_cr_increase_actions_price_drop_agg = (
         pd.DataFrame(
-            df_cr_increase_actions_price_drop.groupby("vault").nunique()["report_date"]
+            df_cr_increase_actions_price_drop.groupby(["urn", "ilk"]).nunique()[
+                "report_date"
+            ]
         )
         .reset_index()
         .rename(columns={"report_date": "unique_price_drop_days_protected"})
     )
     # sum up all CR increase actions during all major price drop days
     df_cr_increase_total = (
-        df_cr_increase_actions_price_drop.groupby("vault").sum().reset_index()
+        df_cr_increase_actions_price_drop.groupby(["urn", "ilk"]).sum().reset_index()
     )
     df_cr_increase_actions_price_drop_agg = pd.merge(
-        df_cr_increase_total, df_cr_increase_actions_price_drop_agg, on="vault"
+        df_cr_increase_total, df_cr_increase_actions_price_drop_agg, on=["urn", "ilk"]
     )
 
     # number of CR increase actions
@@ -262,54 +261,68 @@ def get_protection_score_data():
         df_cr_increase_actions_price_drop_agg,
         df_volatility_actions[
             [
-                "vault",
+                "urn",
+                "ilk",
                 "volatility_actions_30d_low",
                 "volatility_actions_30d_medium",
             ]
         ],
         how="left",
-        on="vault",
+        on=["urn", "ilk"],
     )
 
     # recent activity indicators
 
     df_recent_activity = run_query(
         """
-    with
-    vault_recent_activity as (
-
-        select
-            vault_uid as vault
-            , sum(case when to_timestamp(a.timestamp) >= current_date - 7 then 1 else 0 end)
-            as unique_actions_7d
-            , sum(case when to_timestamp(a.timestamp) >= current_date - 30 then 1 else 0 end)
-            as unique_actions_30d
-            , sum(case when to_timestamp(a.timestamp) >= current_date - 90 then 1 else 0 end)
-            as unique_actions_90d
-        from
-            maker_vaulteventstate a
-        join
-            maker_ilk b
-        on
-            a.ilk = b.ilk
-        where
-            to_timestamp(a.timestamp) >= current_date - 90
-        and
-            type in ('asset', 'lp')
-        group by 1
-        order by 2 desc)
-    select
-        *
-        , case when unique_actions_7d >= 10 then 1 else 0 end as unique_actions_7d_10
-        , case when unique_actions_30d >= 10 then 1 else 0 end as unique_actions_30d_10
-        , case when unique_actions_90d >= 10 then 1 else 0 end as unique_actions_90d_10
-    from
-        vault_recent_activity
-    """
+        WITH vault_recent_activity AS (
+            SELECT
+                urn,
+                a.ilk,
+                SUM(
+                    CASE
+                        WHEN CAST(a.datetime AS TIMESTAMP) >= current_date - interval '7 days'
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS unique_actions_7d,
+                SUM(
+                    CASE
+                        WHEN CAST(a.datetime AS TIMESTAMP) >= current_date - interval '30 days'
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS unique_actions_30d,
+                SUM(
+                    CASE
+                        WHEN CAST(a.datetime AS TIMESTAMP) >= current_date - interval '90 days'
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS unique_actions_90d
+            FROM
+                maker_urneventstate a
+            JOIN
+                maker_ilk b
+            ON
+                a.ilk = b.ilk
+            WHERE
+                CAST(a.datetime AS TIMESTAMP) >= current_date - interval '90 days'
+            AND
+                type IN ('asset', 'lp')
+            GROUP BY 1, 2
+        )
+        SELECT
+            *,
+            CASE WHEN unique_actions_7d >= 10 THEN 1 ELSE 0 END AS unique_actions_7d_10,
+            CASE WHEN unique_actions_30d >= 10 THEN 1 ELSE 0 END AS unique_actions_30d_10,
+            CASE WHEN unique_actions_90d >= 10 THEN 1 ELSE 0 END AS unique_actions_90d_10
+        FROM
+            vault_recent_activity
+        """
     )
-
     df_protection_scores = pd.merge(
-        df_protection_scores, df_recent_activity, on="vault", how="left"
+        df_protection_scores, df_recent_activity, on=["urn", "ilk"], how="left"
     ).fillna(0)
     del df_recent_activity
 
@@ -317,8 +330,8 @@ def get_protection_score_data():
         """
 
         select
-            uid as vault
-            , ilk as vault_type
+            urn
+            , ilk
             , (collateralization / 100)::numeric(20,2) as cur_cr
             , ratio as cur_lr
             , is_institution
@@ -346,7 +359,7 @@ def get_protection_score_data():
     )
 
     df_protection_scores = pd.merge(
-        df_active_vaults, df_protection_scores, on="vault", how="left"
+        df_active_vaults, df_protection_scores, on=["urn", "ilk"], how="left"
     ).fillna(0)
     del df_active_vaults
 
@@ -357,49 +370,47 @@ def get_protection_score_data():
         vault_operations as (
     -- all CR increase actions in the recent period
     select
-        vault_uid as vault
+        a.urn
         , a.ilk
         , lr
         , b.collateral as collateral_asset
-        , date_trunc('day', to_timestamp(a.timestamp)) as report_date
-        , min(to_timestamp(a.timestamp)) as event_dts
+        , date_trunc('day', CAST(a.datetime AS TIMESTAMP)) as report_date
+        , min(CAST(a.datetime AS TIMESTAMP)) as event_dts
     from
-        maker_vaulteventstate a
+        maker_urneventstate a
     join
         maker_ilk b
     on
         a.ilk = b.ilk
     where
-        after_ratio > before_ratio
+        a.dink/1e18*a.collateral_price > a.dart/1e18
     and
-        to_timestamp(a.timestamp) > current_date - 180
+        CAST(a.datetime AS TIMESTAMP) > current_date - 180
     and
         type in ('asset', 'lp')
-    and
-        operation in ('DEPOSIT', 'PAYBACK', 'PAYBACK-WITHDRAW')
     group by 1,2,3,4,5),
 
     vault_operations_min_price as (
-    -- replicate vault state with the minimum price within the next 24 h
-    select
-        vault
-        , a.ilk
-        , lr
-        , report_date
-        , event_dts
-        , b.operation
-        , a.collateral_asset
-        , before_collateral::numeric(20,2)
-        , before_principal::numeric(20,2)
-        , min(current_price)::numeric(20,2) as min_osm_price
+    -- replicate vault state with the minimum price within the next 24 hreport_date
+        select
+            a.urn
+            , a.ilk
+            , lr
+            , report_date
+            , event_dts
+            , b.operation
+            , a.collateral_asset
+            , (b.ink-b.dink)/1e18 AS before_collateral
+            , b.debt-(b.dart/1e18*b.rate/1e27) as before_principal
+            , min(current_price) as min_osm_price
     from
         vault_operations a
     join
-        maker_vaulteventstate b
+        maker_urneventstate b
     on
-        a.event_dts = to_timestamp(b.timestamp)
+        a.event_dts = CAST(b.datetime AS TIMESTAMP)
     and
-        a.vault = b.vault_uid
+        a.urn = b.urn
     join
         maker_osm c
     on
@@ -412,7 +423,7 @@ def get_protection_score_data():
 
     select
         *
-        , (before_collateral*min_osm_price / nullif(before_principal,0))::numeric(20,2)
+        , (before_collateral*min_osm_price / nullif(before_principal,0))
             as min_cr
     from
         vault_operations_min_price),
@@ -420,28 +431,29 @@ def get_protection_score_data():
     select
         a.*
         , case when min_cr < lr then 1 else 0 end as liquidatable
-        , max(case when b.operation = 'LIQUIDATE' then 1 else 0 end) as liquidated
+        , max(case when b.operation = 'Liquidation' then 1 else 0 end) as liquidated
     from
         vault_events_liquidatable a
     left join
-        maker_vaulteventstate b
+        maker_urneventstate b
     on
-        a.vault = b.vault_uid
+        a.urn = b.urn
     and
-        to_timestamp(b.timestamp) between event_dts and event_dts + interval '24 hours'
+        CAST(b.datetime AS TIMESTAMP) between event_dts and event_dts + interval '24 hours'
     and
-        a.before_collateral > 0 and a.before_principal > 0
+        b.ink - b.dink > 0 and b.debt-b.dart/1e18*b.rate > 0
     group by 1,2,3,4,5,6,7,8,9,10,11,12),
 
     vault_protections_agg as (
 
     select
-        vault
+        urn
+        , ilk
         , sum(case when liquidatable = 1 and liquidated = 0 then 1 else 0 end)
         as liquidation_protections
     from
         vault_protections
-    group by 1
+    group by 1, 2
     order by 2 desc)
 
     select
@@ -459,7 +471,7 @@ def get_protection_score_data():
     )
 
     df_protection_scores = pd.merge(
-        df_protection_scores, df_vault_protections, on="vault", how="left"
+        df_protection_scores, df_vault_protections, on=["urn", "ilk"], how="left"
     ).fillna(0)
     del df_vault_protections
 
@@ -500,14 +512,16 @@ def save_protection_score():
         if row.is_institution:
             protection_score = "low"
 
-        vaults_to_update.append(Vault(uid=row.vault, protection_score=protection_score))
-
+        vaults_to_update.append(
+            Vault(urn=row.urn, ilk=row.ilk, protection_score=protection_score)
+        )
+        vault = Vault.objects.get(urn=row.urn, ilk=row.ilk)
         protection_scores_to_create.append(
             VaultProtectionScore(
                 timestamp=timestamp,
                 datetime=dt,
-                vault_uid=row.vault,
-                ilk=row.vault_type,
+                vault_uid=vault.uid,
+                ilk=row.ilk,
                 cur_cr=row.cur_cr,
                 total_debt_dai=row.total_debt_dai,
                 protection_service=row.protection_service,

@@ -15,7 +15,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from maker.models import Asset, Ilk, IlkHistoricStats, PSMDAISupply, RawEvent
+from maker.models import Asset, Ilk, IlkHistoricStats, PSMDAISupply, UrnEventState
 from maker.utils.views import PaginatedApiView, fetch_all, fetch_one
 
 log = logging.getLogger(__name__)
@@ -25,8 +25,6 @@ class PSMEventsSerializer(serpy.DictSerializer):
     block_number = serpy.Field()
     datetime = serpy.Field()
     tx_hash = serpy.Field()
-    operation = serpy.Field()
-    collateral = serpy.Field()
     principal = serpy.Field()
 
     symbol = serpy.MethodField()
@@ -41,20 +39,20 @@ class PSMEventsView(PaginatedApiView):
     """
 
     default_order = "-block_number"
-    ordering_fields = ["block_number", "collateral", "principal", "datetime"]
+    ordering_fields = ["block_number", "principal", "datetime"]
     serializer_class = PSMEventsSerializer
 
     def get_queryset(self, search_filters, query_params, **kwargs):
-        return RawEvent.objects.filter(
-            ilk=kwargs["ilk"], operation__in=["PAYBACK", "GENERATE"]
-        ).values(
-            "block_number",
-            "datetime",
-            "tx_hash",
-            "operation",
-            "collateral",
-            "principal",
-            "ilk",
+        return (
+            UrnEventState.objects.filter(ilk=kwargs["ilk"])
+            .annotate(principal=F("dart") / Decimal("1e18"))
+            .values(
+                "block_number",
+                "datetime",
+                "tx_hash",
+                "principal",
+                "ilk",
+            )
         )
 
 
@@ -73,13 +71,15 @@ class PSMEventStatsView(APIView):
 
         sql = """
             SELECT
-                 operation
-                , DATE_TRUNC('day', datetime) as dt
-                , SUM(principal) as amount
-            FROM maker_rawevent
+                DATE_TRUNC('day', datetime) as dt
+                , CASE
+                    WHEN dart > 0 THEN 'GENERATE'
+                    ELSE 'PAYBACK'
+                END AS operation
+                , SUM(dart/1e18) as amount
+            FROM maker_urneventstate
             WHERE datetime::date >= %s
                 AND ilk = %s
-                AND operation IN ('PAYBACK', 'GENERATE')
             GROUP BY 1, 2
             ORDER BY 2
         """
@@ -312,16 +312,18 @@ class PSMsEventStatsView(APIView):
 
         sql = """
             SELECT
-                 operation
-                , ilk
-                , DATE_TRUNC('day', datetime) AS dt
-                , SUM(principal) AS amount
-            FROM maker_rawevent
+                ilk
+                , DATE_TRUNC('day', datetime) as dt
+                , CASE
+                    WHEN dart > 0 THEN 'GENERATE'
+                    ELSE 'PAYBACK'
+                END AS operation
+                , SUM(dart/1e18) as amount
+            FROM maker_urneventstate
             WHERE datetime::date >= %s
                 AND ilk IN %s
-                AND operation IN ('PAYBACK', 'GENERATE')
             GROUP BY 1, 2, 3
-            ORDER BY 3, 2 DESC
+            ORDER BY 2, 1 DESC
         """
         with connection.cursor() as cursor:
             cursor.execute(

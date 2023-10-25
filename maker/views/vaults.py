@@ -3,9 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 import serpy
-from django.db.models import Sum
+from django.db.models import Case, F, FloatField, Sum, When
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
@@ -15,8 +16,8 @@ from maker.models import (
     OSM,
     Ilk,
     IlkHistoricParams,
+    UrnEventState,
     Vault,
-    VaultEventState,
     VaultProtectionScore,
 )
 from maker.utils.views import PaginatedApiView
@@ -55,15 +56,15 @@ class VaultPositionsViewSerializer(serpy.DictSerializer):
 
 
 class VaultEventsViewViewSerializer(serpy.DictSerializer):
-    timestamp = TimestampToDatetimeField()
+    datetime = serpy.Field()
     operation = serpy.Field()
-    human_operation = serpy.Field()
+    order_index = serpy.Field()
     block_number = serpy.Field()
     collateral = serpy.Field()
     principal = serpy.Field()
     before_ratio = serpy.Field()
     after_ratio = serpy.Field()
-    osm_price = serpy.Field()
+    collateral_price = serpy.Field()
     tx_hash = serpy.Field()
 
 
@@ -89,27 +90,68 @@ class VaultView(APIView):
 
 
 class VaultEventsView(PaginatedApiView):
-    default_order = "-timestamp"
+    default_order = "-order_index"
     ordering_fields = [
-        "timestamp",
+        "order_index",
     ]
     serializer_class = VaultEventsViewViewSerializer
     lookup_field = "uid"
 
     def get_queryset(self, **kwargs):
-        return VaultEventState.objects.filter(
-            vault_uid=kwargs["uid"], ilk=kwargs["ilk"]
-        ).values(
-            "timestamp",
-            "operation",
-            "human_operation",
-            "block_number",
-            "collateral",
-            "principal",
-            "before_ratio",
-            "after_ratio",
-            "osm_price",
-            "tx_hash",
+        vault = get_object_or_404(Vault, uid=kwargs["uid"], ilk=kwargs["ilk"])
+
+        return (
+            UrnEventState.objects.filter(urn=vault.urn, ilk=kwargs["ilk"])
+            .annotate(
+                collateral=F("dink") / Decimal("1e18"),
+                principal=F("dart") / Decimal("1e18") * F("rate") / Decimal("1e27"),
+                before_ratio=Case(
+                    When(
+                        debt__gt=(
+                            F("dart") / Decimal("1e18") * F("rate") / Decimal("1e27")
+                        ),
+                        then=(
+                            (F("ink") - F("dink"))
+                            / Decimal("1e18")
+                            * F("collateral_price")
+                        )
+                        / (
+                            F("debt")
+                            - (
+                                F("dart")
+                                / Decimal("1e18")
+                                * F("rate")
+                                / Decimal("1e27")
+                            )
+                        )
+                        * 100,
+                    ),
+                    default=0,
+                    output_field=FloatField(),
+                ),
+                after_ratio=Case(
+                    When(
+                        debt__gt=0,
+                        then=(F("ink") / Decimal("1e18") * F("collateral_price"))
+                        / F("debt")
+                        * 100,
+                    ),
+                    default=0,
+                    output_field=FloatField(),
+                ),
+            )
+            .values(
+                "datetime",
+                "operation",
+                "block_number",
+                "collateral",
+                "principal",
+                "order_index",
+                "before_ratio",
+                "after_ratio",
+                "collateral_price",
+                "tx_hash",
+            )
         )
 
 
@@ -239,27 +281,26 @@ class VaultCrHistoryView(APIView):
         symbol = vault.ilk.split("-")[0]
 
         days_ago = int(request.GET.get("days_ago", 7))
+        start_dt = datetime.now() - timedelta(days=days_ago)
 
-        start_cr = (datetime.now() - timedelta(days=days_ago)).timestamp()
         try:
-            start_timestamp = (
-                VaultEventState.objects.filter(
-                    vault_uid=vault.uid, timestamp__lte=start_cr
-                )
+            first_entry_dt = (
+                UrnEventState.objects.filter(urn=vault.urn, datetime__lte=start_dt)
                 .latest()
-                .timestamp
+                .datetime
             )
-        except VaultEventState.DoesNotExist:
-            start_timestamp = (
-                VaultEventState.objects.filter(vault_uid=vault.uid).earliest().timestamp
+            start_timestamp = int(first_entry_dt.timestamp())
+        except UrnEventState.DoesNotExist:
+            first_entry_dt = (
+                UrnEventState.objects.filter(urn=vault.urn).earliest().datetime
             )
+            start_timestamp = int(first_entry_dt.timestamp())
 
         crs = iter(
-            VaultEventState.objects.filter(
-                vault_uid=vault.uid, timestamp__gte=start_timestamp
-            )
-            .values("after_collateral", "after_principal", "timestamp")
-            .order_by("timestamp")
+            UrnEventState.objects.filter(urn=vault.urn, datetime__gte=first_entry_dt)
+            .annotate(collateral=F("ink") / 10**18)
+            .values("collateral", "debt", "datetime")
+            .order_by("datetime")
         )
 
         data = []
@@ -311,17 +352,17 @@ class VaultCrHistoryView(APIView):
                     break
 
             while next_cr:
-                if osm["timestamp"] >= next_cr["timestamp"]:
+                if osm["timestamp"] >= next_cr["datetime"].timestamp():
                     curr_cr = next_cr
                     next_cr = next(crs, None)
                 else:
                     break
 
-            if curr_cr["after_principal"] > 0:
+            if curr_cr["debt"] > 0:
                 cr = round(
                     (
-                        (curr_cr["after_collateral"] * osm["current_price"])
-                        / (curr_cr["after_principal"] or 1)
+                        (curr_cr["collateral"] * osm["current_price"])
+                        / (curr_cr["debt"] or 1)
                         * 100
                     ),
                     2,
@@ -354,11 +395,13 @@ class VaultCrHistoryView(APIView):
                 }
             )
 
-        events = VaultEventState.objects.filter(
-            ilk=ilk, vault_uid=uid, timestamp__gte=start_cr
-        ).values(
-            "timestamp",
-            "human_operation",
+        events = (
+            UrnEventState.objects.filter(ilk=ilk, urn=vault.urn, datetime__gte=start_dt)
+            .annotate(human_operation=F("operation"))
+            .values(
+                "datetime",
+                "human_operation",
+            )
         )
         response = {"results": data, "events": events}
         return Response(response, status.HTTP_200_OK)
@@ -405,14 +448,14 @@ class VaultDebtHistoryView(APIView):
     def get(self, request, ilk, uid):
         vault = get_object_or_404(Vault, uid=uid, ilk=ilk)
         debts = (
-            VaultEventState.objects.filter(vault_uid=vault.uid)
-            .values("after_principal", "timestamp")
-            .order_by("timestamp")
+            UrnEventState.objects.filter(urn=vault.urn, ilk=ilk)
+            .values("debt", "datetime")
+            .order_by("datetime")
         )
 
-        events = VaultEventState.objects.filter(ilk=ilk, vault_uid=uid).values(
-            "timestamp",
-            "human_operation",
+        events = UrnEventState.objects.filter(ilk=ilk, urn=vault.urn).values(
+            "datetime",
+            "operation",
         )
 
         response = {"debts": debts, "events": events}

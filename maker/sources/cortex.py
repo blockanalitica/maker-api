@@ -19,7 +19,7 @@ def _cortex_get(url, **kwargs):
     return data
 
 
-def fetch_cortext_ilk_vaults(ilk):
+def fetch_cortex_ilk_vaults(ilk):
     next_url = (
         f"{settings.BLOCKANALITICA_CORTEX_URL}/"
         f"api/v1/maker/vaults/current-state?ilk={ilk}&page_size=5000&diff=1"
