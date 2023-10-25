@@ -561,7 +561,6 @@ def fetch_defi_balance():
 def backpopulate_defi_balance(blocks):
     chain = Blockchain()
     for data in blocks:
-        # print(data)
         fetch_maker_balances(chain, data["block_number"], data["dt"])
         fetch_aavev3_balances(chain, data["block_number"], data["dt"])
         fetch_euler_balances(chain, data["block_number"], data["dt"])

@@ -42,7 +42,7 @@ from .modules.discord import (
     send_risk_premium_and_protection_score_alerts,
     send_vaults_at_risk_alert,
 )
-from .modules.events import save_events, sync_vault_event_states
+from .modules.events import save_urn_event_states
 from .modules.ilk import save_stats_for_vault
 from .modules.ilks import create_or_update_vaults, save_ilks
 from .modules.liquidations import (
@@ -107,9 +107,6 @@ SCHEDULE = {
         "schedule": crontab(minute="*/5"),
     },
     "save_asset_market_caps_task": {
-        "schedule": crontab(minute="*/30"),
-    },
-    "sync_vaults_events_task": {
         "schedule": crontab(minute="*/30"),
     },
     # "get_slippage_for_slippage_pairs": {
@@ -309,6 +306,7 @@ def check_to_sync_vaults():
     # if Vault.objects.filter(block_number=block_number).count() > 0:
     #     log.info("Skiping sync_vaults for block_number %s", block_number)
     #     return
+    save_urn_event_states()
     sync_vaults_task.delay()
     sync_auctions_task.delay()
 
@@ -320,12 +318,6 @@ def sync_vaults_task():
         sync_ilk_vaults_task.apply_async(args=(ilk,), countdown=idx * 2)
 
     claculate_and_save_psm_dai_supply_task.delay()
-
-
-@app.task
-def sync_vaults_events_task():
-    save_events()
-    sync_vault_event_states()
 
 
 @app.task

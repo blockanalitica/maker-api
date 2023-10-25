@@ -2,7 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from collections import defaultdict
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 from django.db import connection
 from django.http import Http404
@@ -256,20 +258,13 @@ class IlkEventStatsView(APIView):
             SELECT
                 operation
                 , DATE_TRUNC('day', datetime) as dt
-                , CASE
-                    WHEN operation IN ('DEPOSIT', 'WITHDRAW')
-                    THEN SUM(collateral)
-                    ELSE SUM(principal)
-                  END as amount
-                , CASE
-                    WHEN operation IN ('DEPOSIT', 'WITHDRAW')
-                    THEN SUM(collateral * osm_price)
-                    ELSE SUM(principal)
-                  END as amount_usd
-            FROM maker_rawevent
+                , SUM(dart/1e18 * rate/1e27) as principal
+                , SUM(dink/1e18) as collateral
+                , SUM(dink/1e18*collateral_price) as collateral_usd
+            FROM maker_urneventstate
             WHERE datetime::date >= %s
                 AND ilk = %s
-                AND operation IN ('DEPOSIT', 'WITHDRAW', 'GENERATE', 'PAYBACK')
+                AND operation IN ('Boost', 'Borrow', 'Deposit', 'Repay', 'Unwind', 'Withdraw')
             GROUP BY 1, 2
             ORDER BY 2
         """
@@ -282,5 +277,74 @@ class IlkEventStatsView(APIView):
                 ],
             )
             events = fetch_all(cursor)
+        transformed_events_dict = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(Decimal))
+        )
+        transformed_events = []
 
-        return Response(events, status.HTTP_200_OK)
+        for event in events:
+            if event["operation"] == "Boost":
+                transformed_events_dict[event["dt"]]["DEPOSIT"]["amount"] = event[
+                    "collateral"
+                ]
+                transformed_events_dict[event["dt"]]["DEPOSIT"]["amount_usd"] = event[
+                    "collateral_usd"
+                ]
+                transformed_events_dict[event["dt"]]["GENERATE"]["amount"] = event[
+                    "principal"
+                ]
+                transformed_events_dict[event["dt"]]["GENERATE"]["amount_usd"] = event[
+                    "principal"
+                ]
+            if event["operation"] == "Unwind":
+                transformed_events_dict[event["dt"]]["WITHDRAW"]["amount"] = event[
+                    "collateral"
+                ]
+                transformed_events_dict[event["dt"]]["WITHDRAW"]["amount_usd"] = event[
+                    "collateral_usd"
+                ]
+                transformed_events_dict[event["dt"]]["PAYBACK"]["amount"] = event[
+                    "principal"
+                ]
+                transformed_events_dict[event["dt"]]["PAYBACK"]["amount_usd"] = event[
+                    "principal"
+                ]
+            if event["operation"] == "Borrow":
+                transformed_events_dict[event["dt"]]["GENERATE"]["amount"] = event[
+                    "principal"
+                ]
+                transformed_events_dict[event["dt"]]["GENERATE"]["amount_usd"] = event[
+                    "principal"
+                ]
+            if event["operation"] == "Repay":
+                transformed_events_dict[event["dt"]]["PAYBACK"]["amount"] = event[
+                    "principal"
+                ]
+                transformed_events_dict[event["dt"]]["PAYBACK"]["amount_usd"] = event[
+                    "principal"
+                ]
+            if event["operation"] == "Deposit":
+                transformed_events_dict[event["dt"]]["DEPOSIT"]["amount"] = event[
+                    "collateral"
+                ]
+                transformed_events_dict[event["dt"]]["DEPOSIT"]["amount_usd"] = event[
+                    "collateral_usd"
+                ]
+            if event["operation"] == "Withdraw":
+                transformed_events_dict[event["dt"]]["WITHDRAW"]["amount"] = event[
+                    "collateral"
+                ]
+                transformed_events_dict[event["dt"]]["WITHDRAW"]["amount_usd"] = event[
+                    "collateral_usd"
+                ]
+        for dt, event_values in transformed_events_dict.items():
+            for operation, values in event_values.items():
+                transformed_events.append(
+                    {
+                        "dt": dt,
+                        "operation": operation,
+                        "amount": values["amount"],
+                        "amount_usd": values["amount_usd"],
+                    }
+                )
+        return Response(transformed_events, status.HTTP_200_OK)
