@@ -1013,5 +1013,3 @@ def process_clipper_events(block_number):
         obj.mkt_settled_avg = take_events["avg_osm_price"]
 
         obj.save()
-
-
