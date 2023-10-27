@@ -533,247 +533,14 @@ class AuctionKickSim:
         return data
 
 
-def save_actions(backpopulate=False):
-    if backpopulate:
-        from_datetime = None
-    else:
-        try:
-            from_datetime = AuctionAction.objects.latest().datetime
-        except AuctionAction.DoesNotExist:
-            from_datetime = None
-
-    snowflake = MCDSnowflake()
-    if from_datetime:
-        query = snowflake.run_query(
-            """
-                select
-                    ID,
-                    LOAD_ID,
-                    AUCTION_ID,
-                    TIMESTAMP,
-                    BLOCK,
-                    TX_HASH,
-                    TYPE,
-                    CALLER,
-                    DATA,
-                    DEBT,
-                    INIT_PRICE,
-                    MAX_COLLATERAL_AMT,
-                    AVAILABLE_COLLATERAL,
-                    SOLD_COLLATERAL,
-                    MAX_PRICE,
-                    COLLATERAL_PRICE,
-                    OSM_PRICE,
-                    RECOVERED_DEBT,
-                    CLOSING_TAKE,
-                    KEEPER,
-                    INCENTIVES,
-                    URN,
-                    GAS_USED,
-                    STATUS,
-                    REVERT_REASON,
-                    ROUND,
-                    BREADCRUMB,
-                    ILK,
-                    MKT_PRICE
-                from
-                    "LIQUIDATIONS"."INTERNAL"."ACTION"
-                where TIMESTAMP > '{}'
-            """.format(
-                str(from_datetime)
-            )
-        )
-    else:
-        query = snowflake.run_query(
-            """
-                select
-                    ID,
-                    LOAD_ID,
-                    AUCTION_ID,
-                    TIMESTAMP,
-                    BLOCK,
-                    TX_HASH,
-                    TYPE,
-                    CALLER,
-                    DATA,
-                    DEBT,
-                    INIT_PRICE,
-                    MAX_COLLATERAL_AMT,
-                    AVAILABLE_COLLATERAL,
-                    SOLD_COLLATERAL,
-                    MAX_PRICE,
-                    COLLATERAL_PRICE,
-                    OSM_PRICE,
-                    RECOVERED_DEBT,
-                    CLOSING_TAKE,
-                    KEEPER,
-                    INCENTIVES,
-                    URN,
-                    GAS_USED,
-                    STATUS,
-                    REVERT_REASON,
-                    ROUND,
-                    BREADCRUMB,
-                    ILK,
-                    MKT_PRICE
-                from
-                    "LIQUIDATIONS"."INTERNAL"."ACTION"
-        """
-        )
-
-    events = query.fetchmany(size=1000)
-    while len(events) > 0:
-        for event in events:
-            item = {
-                "id": event[0],
-                "auction_uid": event[2],
-                "datetime": event[3],
-                "block_number": event[4],
-                "tx_hash": event[5],
-                "type": event[6],
-                "caller": event[7],
-                # "data": event[8],
-                "debt": event[9],
-                "init_price": event[10],
-                # "max_collateral": event[11],
-                "available_collateral": event[12],
-                "sold_collateral": event[13],
-                # "max_price": event[14],
-                "collateral_price": event[15],
-                "osm_price": event[16],
-                "recovered_debt": event[17],
-                "closing_take": event[18],
-                "keeper": event[19],
-                "incentives": event[20],
-                "urn": event[21],
-                "gas_used": event[22],
-                "status": event[23],
-                # "revert_reason": event[24],
-                "round": event[25],
-                "ilk": event[27],
-                "mkt_price": event[28],
-            }
-            uid = item.pop("id")
-            ilk = item.pop("ilk")
-            AuctionAction.objects.update_or_create(
-                uid=uid,
-                ilk=ilk,
-                defaults=item,
-            )
-        events = query.fetchmany(size=1000)
-    snowflake.close()
-
-
-def save_auctions(backpopulate=False):
-    if backpopulate:
-        from_datetime = None
-    else:
-        try:
-            from_datetime = (
-                Auction.objects.filter(Q(finished=False) | Q(finished=None))
-                .latest()
-                .auction_start
-            )
-        except Auction.DoesNotExist:
-            from_datetime = Auction.objects.filter(finished=True).latest().auction_start
-
-    snowflake = MCDSnowflake()
-    if from_datetime:
-        query = snowflake.run_query(
-            """
-                select
-                    LOAD_ID,
-                    AUCTION_ID,
-                    AUCTION_START,
-                    VAULT,
-                    ILK,
-                    URN,
-                    OWNER,
-                    DEBT,
-                    AVAILABLE_COLLATERAL,
-                    PENALTY,
-                    SOLD_COLLATERAL,
-                    RECOVERED_DEBT,
-                    ROUND,
-                    AUCTION_END,
-                    FINISHED,
-                    ID
-                from
-                    "LIQUIDATIONS"."INTERNAL"."AUCTION"
-                where AUCTION_START > '{}'
-            """.format(
-                str(from_datetime)
-            )
-        )
-    else:
-        query = snowflake.run_query(
-            """
-                select
-                    LOAD_ID,
-                    AUCTION_ID,
-                    AUCTION_START,
-                    VAULT,
-                    ILK,
-                    URN,
-                    OWNER,
-                    DEBT,
-                    AVAILABLE_COLLATERAL,
-                    PENALTY,
-                    SOLD_COLLATERAL,
-                    RECOVERED_DEBT,
-                    ROUND,
-                    AUCTION_END,
-                    FINISHED,
-                    ID
-                from
-                    "LIQUIDATIONS"."INTERNAL"."AUCTION"
-            """
-        )
-
-    events = query.fetchmany(size=1000)
-    while len(events) > 0:
-        for event in events:
-            item = {
-                "auction_id": event[1],
-                # "auction_start": event[2],
-                "vault_uid": event[3],
-                "ilk": event[4],
-                "urn": event[5],
-                "owner": event[6],
-                "debt": event[7],
-                "available_collateral": event[8],
-                "penalty": event[9],
-                "sold_collateral": event[10],
-                "recovered_debt": event[11],
-                "round": event[12],
-                "action_end": event[13],
-                "finished": event[14],
-                "symbol": event[4].split("-")[0],
-            }
-            Auction.objects.update_or_create(
-                ilk=item["ilk"],
-                uid=item["auction_id"],
-                defaults=dict(
-                    vault=item["vault_uid"],
-                    urn=item["urn"],
-                    owner=item["owner"],
-                    penalty=item["penalty"],
-                    round=item["round"],
-                    symbol=item["symbol"],
-                ),
-            )
-            calculate_data_for_auction(item["ilk"], item["auction_id"])
-        events = query.fetchmany(size=1000)
-    snowflake.close()
-
-
-def sync_auctions(backpopulate=False):
-    save_actions(backpopulate=backpopulate)
-    save_auctions(backpopulate=backpopulate)
+def sync_auctions():
+    latest_block = ClipperEvent.latest_block_number()
+    save_clipper_events()
+    process_clipper_events(latest_block)
 
 
 def get_auction(ilk, auction_uid):
-    auction = Auction.objects.get(ilk=ilk, uid=auction_uid)
+    auction = AuctionV1.objects.get(ilk=ilk, uid=auction_uid)
 
     auction_data = {
         "ilk": auction.ilk,
@@ -794,8 +561,8 @@ def get_auction(ilk, auction_uid):
         / auction.kicked_collateral,
         "symbol": auction.symbol,
     }
-    kicks = AuctionAction.objects.filter(
-        ilk=ilk, auction_uid=auction_uid, type="kick", status=1
+    kicks = AuctionEvent.objects.filter(
+        ilk=ilk, auction_uid=auction_uid, type="kick"
     ).values(
         "auction_id",
         "auction_uid",
@@ -805,19 +572,17 @@ def get_auction(ilk, auction_uid):
         "available_collateral",
         "sold_collateral",
         "recovered_debt",
-        "round",
         "type",
         "collateral_price",
         "osm_price",
         "mkt_price",
         "keeper",
         "incentives",
-        "status",
         "caller",
     )
     takes = (
-        AuctionAction.objects.filter(
-            ilk=ilk, auction_uid=auction_uid, type="take", status=1
+        AuctionEvent.objects.filter(
+            ilk=ilk, auction_uid=auction_uid, type="take"
         )
         .annotate(
             osm_settled=(F("collateral_price") / F("osm_price")) - 1,
@@ -832,14 +597,12 @@ def get_auction(ilk, auction_uid):
             "available_collateral",
             "sold_collateral",
             "recovered_debt",
-            "round",
             "type",
             "collateral_price",
             "osm_price",
             "mkt_price",
             "keeper",
             "incentives",
-            "status",
             "caller",
             "osm_settled",
             "mkt_settled",
@@ -848,65 +611,11 @@ def get_auction(ilk, auction_uid):
     return list(kicks), list(takes), auction_data
 
 
-def calculate_data_for_auction(ilk, uid):
-    auction = Auction.objects.get(ilk=ilk, uid=uid)
-    date_start_end = AuctionAction.objects.filter(
-        ilk=auction.ilk, auction_uid=auction.uid, status=1
-    ).aggregate(Max("datetime"), Min("datetime"))
-    kick = AuctionAction.objects.get(
-        auction_uid=auction.uid, type="kick", status=1, ilk=auction.ilk
-    )
-    auction.auction_start = date_start_end["datetime__min"]
-    auction.auction_end = date_start_end["datetime__max"]
-    diff = date_start_end["datetime__max"] - date_start_end["datetime__min"]
-    duration = int(diff.seconds / 60)
-    auction.duration = duration
-    penalty = Decimal("0.13") if auction.penalty is None else auction.penalty
-    penalty_fee = Decimal(1) + penalty
-    debt_liquidated = kick.debt / penalty_fee
-    auction.debt_liquidated = debt_liquidated
-    auction.kicked_collateral = kick.available_collateral
-
-    actions = AuctionAction.objects.filter(
-        ilk=auction.ilk, auction_uid=auction.uid, type="take", status=1
-    )
-    if actions:
-        data = actions.annotate(
-            sum_sold_collateral=Sum("sold_collateral"),
-            osm_settled=(F("collateral_price") / F("osm_price")) - 1,
-            mkt_settled=(F("collateral_price") / F("mkt_price")) - 1,
-        ).aggregate(
-            debt_take=Sum("recovered_debt"),
-            sold=Sum("sold_collateral"),
-            total_debt=Sum("debt"),
-            collateral=Sum("available_collateral"),
-            osm_settled_avg=Avg("osm_settled"),
-            mkt_settled_avg=Avg("mkt_settled"),
-        )
-        penalty_fee = data["debt_take"] - debt_liquidated
-        auction.penalty_fee = penalty_fee
-        auction.recovered_debt = data["debt_take"]
-        auction.sold_collateral = data["sold"]
-        auction.debt = kick.debt - data["debt_take"]
-        auction.available_collateral = kick.available_collateral - data["sold"]
-        auction.avg_price = data["debt_take"] / data["sold"]
-        auction.osm_settled_avg = data["osm_settled_avg"]
-        auction.mkt_settled_avg = data["mkt_settled_avg"]
-
-        if (
-            auction.debt == 0
-            or datetime.now() - timedelta(hours=2) > auction.auction_start
-        ):
-            auction.finished = True
-    AuctionAction.objects.filter(ilk=auction.ilk, auction_uid=auction.uid).update(
-        auction=auction
-    )
-    auction.save()
 
 
 def get_ilk_auctions_per_date(ilk, dt=None):
     return (
-        AuctionAction.objects.filter(
+        AuctionEvent.objects.filter(
             ilk=ilk, type="take", status=1, auction__auction_start__date=dt
         )
         .annotate(

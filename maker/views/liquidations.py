@@ -20,7 +20,7 @@ from maker.modules.liquidations import get_liquidations_per_drop_data
 from maker.modules.slippage import get_slippage_for_lp, get_slippage_to_dai
 from maker.utils.views import PaginatedApiView
 
-from ..models import Auction, AuctionAction, Ilk
+from ..models import Auction, AuctionAction, AuctionEvent, AuctionV1, Ilk
 from ..modules.auctions import (
     get_auction,
     get_auction_dur_stats,
@@ -430,7 +430,7 @@ class LiquidationsPerDateView(PaginatedApiView):
 
     def get_queryset(self, search_filters, query_params, **kwargs):
         return (
-            Auction.objects.annotate(
+            AuctionV1.objects.annotate(
                 auction_date=Func(F("auction_start"), function="DATE")
             )
             .values("auction_date")
@@ -465,7 +465,7 @@ class LiquidationsPerDateIlksView(PaginatedApiView):
 
     def get_queryset(self, search_filters, query_params, **kwargs):
         return (
-            Auction.objects.filter(auction_start__date=kwargs["date"])
+            AuctionV1.objects.filter(auction_start__date=kwargs["date"])
             .values("ilk")
             .annotate(
                 total_auctions=Count("id"),
@@ -501,7 +501,7 @@ class LiquidationsPerDateIlkView(PaginatedApiView):
 
     def get_queryset(self, search_filters, query_params, **kwargs):
         return (
-            Auction.objects.filter(
+            AuctionV1.objects.filter(
                 ilk=kwargs["ilk"], auction_start__date=kwargs["date"]
             )
             .annotate(
@@ -550,7 +550,7 @@ class LiquidationsPerIlksView(PaginatedApiView):
 
     def get_queryset(self, search_filters, query_params, **kwargs):
         return (
-            Auction.objects.values("ilk")
+            AuctionV1.objects.values("ilk")
             .annotate(
                 total_auctions=Count("id"),
                 total_debt=Sum("debt_liquidated"),
@@ -585,7 +585,7 @@ class LiquidationsPerIlkView(PaginatedApiView):
 
     def get_queryset(self, search_filters, query_params, **kwargs):
         return (
-            Auction.objects.filter(ilk=kwargs["ilk"])
+            AuctionV1.objects.filter(ilk=kwargs["ilk"])
             .annotate(
                 penalty_fee_per=F("penalty_fee") / F("debt_liquidated"),
                 coll_returned=(F("available_collateral") / F("kicked_collateral")),
@@ -644,11 +644,11 @@ class KeepersView(APIView):
             query_filter["datetime__date"] = filter_date
         if vault_ilk:
             query_filter["ilk"] = vault_ilk
-        total_debt = AuctionAction.objects.filter(**query_filter).aggregate(
+        total_debt = AuctionEvent.objects.filter(**query_filter).aggregate(
             amount=Sum("debt")
         )
         keeper_data = (
-            AuctionAction.objects.filter(status=1, **query_filter)
+            AuctionEvent.objects.filter(**query_filter)
             .order_by("keeper")
             .values("keeper", "debt", "incentives", "datetime")
         )
@@ -697,11 +697,11 @@ class TakersView(APIView):
         if vault_ilk:
             query_filter["ilk"] = vault_ilk
 
-        total_debt = AuctionAction.objects.filter(**query_filter).aggregate(
+        total_debt = AuctionEvent.objects.filter(**query_filter).aggregate(
             amount=Sum("recovered_debt")
         )
         taker_data = (
-            AuctionAction.objects.filter(status=1, recovered_debt__gt=0, **query_filter)
+            AuctionEvent.objects.filter(status=1, recovered_debt__gt=0, **query_filter)
             .order_by("datetime")
             .values("caller", "recovered_debt", "datetime")
         )
@@ -744,13 +744,13 @@ class AuctionTakersKeepersView(APIView):
             date_start = data[-1]["date"] + timedelta(days=1)
 
         if not date_start:
-            first_auction = Auction.objects.all().order_by("auction_start").first()
+            first_auction = AuctionV1.objects.all().order_by("auction_start").first()
             date_start = first_auction.auction_start.date()
 
         dt = date_start
 
         while dt <= date.today():
-            auctions = Auction.objects.filter(auction_start__date__lt=dt)[
+            auctions = AuctionV1.objects.filter(auction_start__date__lt=dt)[
                 :100
             ].aggregate(
                 unique_keepers=Count(
