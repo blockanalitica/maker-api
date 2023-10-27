@@ -20,7 +20,7 @@ from maker.modules.liquidations import get_liquidations_per_drop_data
 from maker.modules.slippage import get_slippage_for_lp, get_slippage_to_dai
 from maker.utils.views import PaginatedApiView
 
-from ..models import Auction, AuctionAction, AuctionEvent, AuctionV1, Ilk
+from ..models import AuctionEvent, AuctionV1, Ilk
 from ..modules.auctions import (
     get_auction,
     get_auction_dur_stats,
@@ -106,15 +106,15 @@ class LiquidationsPerDaySerializer(serpy.DictSerializer):
 
 class KeepersField(serpy.Field):
     def to_value(self, value):
-        return AuctionAction.objects.filter(ilk=value).aggregate(
-            count=Count("keeper", distinct=True, filter=Q(type="kick", status=1))
+        return AuctionEvent.objects.filter(ilk=value).aggregate(
+            count=Count("keeper", distinct=True, filter=Q(type="kick"))
         )["count"]
 
 
 class TakersField(serpy.Field):
     def to_value(self, value):
-        return AuctionAction.objects.filter(ilk=value).aggregate(
-            count=Count("caller", distinct=True, filter=Q(type="take", status=1))
+        return AuctionEvent.objects.filter(ilk=value).aggregate(
+            count=Count("caller", distinct=True, filter=Q(type="take"))
         )["count"]
 
 

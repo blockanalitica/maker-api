@@ -14,22 +14,12 @@ import psweep as ps
 import pytz
 from django.core.cache import cache
 from django.db import IntegrityError
-from django.db.models import Avg, F, Max, Min, Q, Sum
+from django.db.models import Avg, F, Sum
 from django_bulk_load import bulk_insert_models
 
-from maker.models import (
-    OSM,
-    Auction,
-    AuctionAction,
-    AuctionEvent,
-    AuctionV1,
-    ClipperEvent,
-    Ilk,
-    Vault,
-)
+from maker.models import OSM, AuctionEvent, AuctionV1, ClipperEvent, Ilk, Vault
 from maker.modules.slippage import get_slippage_for_lp, get_slippage_to_dai
 from maker.sources.cortex import fetch_cortex_clipper_events
-from maker.sources.dicu import MCDSnowflake
 from maker.utils.s3 import download_csv_file_object
 
 
@@ -581,9 +571,7 @@ def get_auction(ilk, auction_uid):
         "caller",
     )
     takes = (
-        AuctionEvent.objects.filter(
-            ilk=ilk, auction_uid=auction_uid, type="take"
-        )
+        AuctionEvent.objects.filter(ilk=ilk, auction_uid=auction_uid, type="take")
         .annotate(
             osm_settled=(F("collateral_price") / F("osm_price")) - 1,
             mkt_settled=(F("collateral_price") / F("mkt_price")) - 1,
@@ -609,8 +597,6 @@ def get_auction(ilk, auction_uid):
         )
     )
     return list(kicks), list(takes), auction_data
-
-
 
 
 def get_ilk_auctions_per_date(ilk, dt=None):
