@@ -602,7 +602,7 @@ def get_auction(ilk, auction_uid):
 def get_ilk_auctions_per_date(ilk, dt=None):
     return (
         AuctionEvent.objects.filter(
-            ilk=ilk, type="take", status=1, auction__auction_start__date=dt
+            ilk=ilk, type="take", auction__auction_start__date=dt
         )
         .annotate(
             osm_settled=(F("collateral_price") / F("osm_price")) - 1,

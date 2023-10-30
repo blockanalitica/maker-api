@@ -701,7 +701,7 @@ class TakersView(APIView):
             amount=Sum("recovered_debt")
         )
         taker_data = (
-            AuctionEvent.objects.filter(status=1, recovered_debt__gt=0, **query_filter)
+            AuctionEvent.objects.filter(recovered_debt__gt=0, **query_filter)
             .order_by("datetime")
             .values("caller", "recovered_debt", "datetime")
         )
