@@ -250,9 +250,9 @@ def create_or_update_vaults(ilk):
         vault.collateral_change_1d = data["ink_change_1d"]
         vault.collateral_change_7d = data["ink_change_7d"]
         vault.collateral_change_30d = data["ink_change_30d"]
-        vault.principal_change_1d = data["art_change_1d"] * data["rate"]
-        vault.principal_change_7d = data["art_change_7d"] * data["rate"]
-        vault.principal_change_30d = data["art_change_30d"] * data["rate"]
+        vault.principal_change_1d = Decimal(data["art_change_1d"]) * Decimal(data["rate"])
+        vault.principal_change_7d = Decimal(data["art_change_7d"]) * Decimal(data["rate"])
+        vault.principal_change_30d = Decimal(data["art_change_30d"]) * Decimal(data["rate"])
         vault.modified = datetime.utcnow()
         if vault.protection_service:
             vault.protection_score = "low"
