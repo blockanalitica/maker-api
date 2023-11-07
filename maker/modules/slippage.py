@@ -117,6 +117,7 @@ def save_cow_slippages(slippage_pair_id):
     to_asset_address = to_asset.address
     to_asset_mantissa = Decimal(str(10**to_asset.decimals))
 
+    latest_value = 0
     usd_amounts = _generate_usd_amounts()
     for usd_amount in usd_amounts:
         log.debug(
@@ -146,7 +147,21 @@ def save_cow_slippages(slippage_pair_id):
 
         slippage_daily.slippage_list.append(slippage)
         slippage_daily.slippage_percent_avg = mean(slippage_daily.slippage_list)
+        slippage_daily.slippage_percent_min = min(
+            slippage_daily.slippage_list, key=lambda x: abs(x)
+        )
+        slippage_daily.slippage_percent_max = max(
+            slippage_daily.slippage_list, key=lambda x: abs(x)
+        )
+
+        closest_number = closer_to(
+            latest_value,
+            slippage_daily.slippage_percent_min,
+            slippage_daily.slippage_percent_max,
+        )
+        slippage_daily.slippage_percent = closest_number
         slippage_daily.save()
+        latest_value = closest_number
 
         if slippage < -80:
             break
@@ -155,6 +170,23 @@ def save_cow_slippages(slippage_pair_id):
 
     slippage_pair.last_run = datetime.utcnow()
     slippage_pair.save()
+
+
+def closer_to(number, first_choice, second_choice):
+    # Calculate the absolute difference between the number and the first choice
+    diff_first = abs(number - first_choice)
+
+    # Calculate the absolute difference between the number and the second choice
+    diff_second = abs(number - second_choice)
+
+    # Compare the differences and return the closer number
+    if diff_first < diff_second:
+        return first_choice
+    elif diff_second < diff_first:
+        return second_choice
+    else:
+        # If both are equally close, you can decide how to handle this case
+        return None
 
 
 def save_zerox_slippages(slippage_pair):
@@ -232,7 +264,7 @@ def get_slippage_from_asset(asset, source=None, for_date=None, extra_key=None):
                 "usd_amount",
                 "pair__from_asset__symbol",
                 "pair__to_asset__symbol",
-                "slippage_percent_avg",
+                "slippage_percent",
             )
             .order_by("usd_amount")
         )
@@ -244,13 +276,13 @@ def get_slippage_from_asset(asset, source=None, for_date=None, extra_key=None):
                 "usd_amount",
                 "pair__from_asset__symbol",
                 "pair__to_asset__symbol",
-                "slippage_percent_avg",
+                "slippage_percent",
             )
             .order_by("usd_amount")
         )
     table_data = defaultdict(dict)
     for slippage in slippages:
-        if not slippage["slippage_percent_avg"]:
+        if not slippage["slippage_percent"]:
             continue
         fa = slippage["pair__from_asset__symbol"]
         ta = slippage["pair__to_asset__symbol"]
@@ -258,7 +290,7 @@ def get_slippage_from_asset(asset, source=None, for_date=None, extra_key=None):
         if extra_key:
             pair = f"{pair} {extra_key}"
         table_data[pair][slippage["usd_amount"]] = round(
-            slippage["slippage_percent_avg"], 2
+            slippage["slippage_percent"], 2
         )
     return table_data
 
@@ -267,7 +299,7 @@ def get_slippage_to_dai(symbol, usd_amount):
     if symbol == "ETH":
         symbol = "WETH"
     if symbol == "WSTETH":
-        symbol = "stETH"
+        symbol = "wstETH"
 
     daily_slippage = (
         SlippageDaily.objects.filter(
@@ -279,7 +311,7 @@ def get_slippage_to_dai(symbol, usd_amount):
         .first()
     )
 
-    slippage_percent = daily_slippage.slippage_percent_avg
+    slippage_percent = daily_slippage.slippage_percent_max
     return slippage_percent
 
 

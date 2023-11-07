@@ -109,9 +109,9 @@ SCHEDULE = {
     "save_asset_market_caps_task": {
         "schedule": crontab(minute="*/30"),
     },
-    # "get_slippage_for_slippage_pairs": {
-    #     "schedule": crontab(minute="15", hour="3,9,15,21"),
-    # },
+    "get_slippage_for_slippage_pairs": {
+        "schedule": crontab(minute="15", hour="*/2"),
+    },
     "send_vaults_at_risk_alert_task": {
         "schedule": crontab(minute="5-21/1"),
     },
@@ -130,9 +130,9 @@ SCHEDULE = {
     "save_ilk_stats_task": {
         "schedule": crontab(minute="0", hour="*/1"),
     },
-    "sync_slippage_daily_from_datalake": {
-        "schedule": crontab(minute="0", hour="*/1"),
-    },
+    # "sync_slippage_daily_from_datalake": {
+    #     "schedule": crontab(minute="0", hour="*/1"),
+    # },
     "sync_dai_trades_from_stablecoin_science_task": {
         "schedule": crontab(minute="55", hour="*/1"),
     },
