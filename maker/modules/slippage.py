@@ -154,6 +154,9 @@ def save_cow_slippages(slippage_pair_id):
             slippage_daily.slippage_list, key=lambda x: abs(x)
         )
 
+        if latest_value is None:
+            latest_value = slippage
+
         closest_number = closer_to(
             latest_value,
             slippage_daily.slippage_percent_min,
