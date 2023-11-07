@@ -154,9 +154,6 @@ def save_cow_slippages(slippage_pair_id):
             slippage_daily.slippage_list, key=lambda x: abs(x)
         )
 
-        if latest_value is None:
-            latest_value = slippage
-
         closest_number = closer_to(
             latest_value,
             slippage_daily.slippage_percent_min,
@@ -188,8 +185,7 @@ def closer_to(number, first_choice, second_choice):
     elif diff_second < diff_first:
         return second_choice
     else:
-        # If both are equally close, you can decide how to handle this case
-        return None
+        return first_choice
 
 
 def save_zerox_slippages(slippage_pair):
