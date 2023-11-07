@@ -162,7 +162,7 @@ class AssetSlippageView(APIView):
     def get(self, request, symbol):
         get_object_or_404(MakerAsset, symbol=symbol)
         if symbol == "WSTETH":
-            symbol = "STETH"
+            symbol = "wstETH"
         asset = get_object_or_404(Asset, underlying_symbol__iexact=symbol)
         data = []
         for symbol, values in get_slippage_from_asset(asset, source="cow").items():
@@ -180,7 +180,7 @@ class AssetSlippageHistoryView(APIView):
     def get(self, request, symbol):
         get_object_or_404(MakerAsset, symbol=symbol)
         if symbol == "WSTETH":
-            symbol = "STETH"
+            symbol = "wstETH"
         asset = get_object_or_404(Asset, underlying_symbol__iexact=symbol)
         data = []
         for symbol, values in get_slippage_history(asset).items():
@@ -513,28 +513,28 @@ class AssetsSlippagesView(APIView):
         )
 
         symbols.remove("WSTETH")
-        symbols.append("stETH")
+        symbols.append("wstETH")
 
         latest = SlippageDaily.objects.latest()
         slippages = (
             SlippageDaily.objects.filter(
                 date=latest.date,
                 pair__from_asset__underlying_symbol__in=symbols,
-                slippage_percent_avg__isnull=False,
+                slippage_percent__isnull=False,
             )
             .select_related("pair", "from_asset", "to_asset")
             .values(
                 "usd_amount",
                 "pair__from_asset__symbol",
                 "pair__to_asset__symbol",
-                "slippage_percent_avg",
+                "slippage_percent",
             )
             .order_by("usd_amount")
         )
 
         data = []
         for slippage in slippages:
-            if not slippage["slippage_percent_avg"]:
+            if not slippage["slippage_percent"]:
                 continue
 
             fa = slippage["pair__from_asset__symbol"]
@@ -543,7 +543,7 @@ class AssetsSlippagesView(APIView):
                 {
                     "key": f"{fa}-{ta}",
                     "usd_amount": slippage["usd_amount"],
-                    "amount": round(slippage["slippage_percent_avg"], 2),
+                    "amount": round(slippage["slippage_percent"], 2),
                 }
             )
         return Response(data, status.HTTP_200_OK)

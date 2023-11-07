@@ -830,6 +830,15 @@ class SlippageDaily(UUIDModel, TimeStampedModel):
         decimal_places=4, max_digits=8, null=True
     )
 
+    slippage_percent_min = models.DecimalField(
+        decimal_places=4, max_digits=8, null=True
+    )
+    slippage_percent_max = models.DecimalField(
+        decimal_places=4, max_digits=8, null=True
+    )
+
+    slippage_percent = models.DecimalField(decimal_places=4, max_digits=8, null=True)
+
     pair = models.ForeignKey(
         "SlippagePair", related_name="slippages", on_delete=models.CASCADE
     )
