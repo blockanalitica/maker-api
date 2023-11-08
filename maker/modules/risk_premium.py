@@ -40,8 +40,8 @@ VAULT_TYPE_TO_VAULT_ASSET_MAPPER = {
     "WBTC-A": "WBTC",
     "WBTC-B": "WBTC",
     "WBTC-C": "WBTC",
-    "WSTETH-A": "stETH",
-    "WSTETH-B": "stETH",
+    "WSTETH-A": "wstETH",
+    "WSTETH-B": "wstETH",
     "RETH-A": "RETH",
 }
 
@@ -51,7 +51,7 @@ VAULT_ASSET_TO_VAULT_TYPE_MAPPER = {
     "LINK": ["LINK-A"],
     "YFI": ["YFI-A"],
     "WBTC": ["WBTC-A", "WBTC-B", "WBTC-C"],
-    "stETH": ["WSTETH-A", "ETH-A", "ETH-B", "ETH-C", "WSTETH-B"],
+    "wstETH": ["WSTETH-A", "ETH-A", "ETH-B", "ETH-C", "WSTETH-B"],
     "RETH": [
         "RETH-A",
         "ETH-A",
