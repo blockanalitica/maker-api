@@ -310,7 +310,7 @@ def get_slippage_to_dai(symbol, usd_amount):
         .first()
     )
 
-    slippage_percent = daily_slippage.slippage_percent_max
+    slippage_percent = daily_slippage.slippage_percent
     return slippage_percent
 
 
