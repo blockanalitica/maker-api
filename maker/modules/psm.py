@@ -2,15 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
 
 from django.db import connection
-from eth_utils import to_bytes
 
-from maker.constants import MCD_VAT_CONTRACT_ADDRESS
-from maker.models import Block, Ilk, PSMDAISupply, UrnEventState
-from maker.utils.blockchain.chain import Blockchain
+from maker.models import Ilk, PSMDAISupply, UrnEventState
 from maker.utils.views import fetch_all
 
 
