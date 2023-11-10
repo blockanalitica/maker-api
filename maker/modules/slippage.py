@@ -22,10 +22,10 @@ log = logging.getLogger(__name__)
 
 
 def _generate_usd_amounts():
-    step = 10_000
+    step = 1_000_000
     x = 0
     usd_amounts = []
-    while x < 3_000_000_000:
+    while x < 1_500_000_000:
         x += step
         usd_amounts.append(x)
         if x == 100_000:
@@ -33,9 +33,9 @@ def _generate_usd_amounts():
         elif x == 1_000_000:
             step = 1_000_000
         elif x == 10_000_000:
-            step = 5_000_000
+            step = 10_000_000
         elif x == 100_000_000:
-            step = 25_000_000
+            step = 50_000_000
     return usd_amounts
 
 
@@ -99,6 +99,7 @@ def save_oneinch_slippages(slippage_pair_id):
         slippage_daily.slippage_list.append(slippage)
         slippage_daily.slippage_percent_avg = mean(slippage_daily.slippage_list)
         slippage_daily.save()
+
         if slippage < -80:
             break
         time.sleep(0.5)
@@ -118,6 +119,7 @@ def save_cow_slippages(slippage_pair_id):
     to_asset_mantissa = Decimal(str(10**to_asset.decimals))
 
     latest_value = 0
+    limit_counter = 0
     usd_amounts = _generate_usd_amounts()
     for usd_amount in usd_amounts:
         log.debug(
@@ -154,19 +156,18 @@ def save_cow_slippages(slippage_pair_id):
             slippage_daily.slippage_list, key=lambda x: abs(x)
         )
 
-        closest_number = closer_to(
-            latest_value,
-            slippage_daily.slippage_percent_min,
-            slippage_daily.slippage_percent_max,
-        )
+        closest_number = closest_to_list(latest_value, slippage_daily.slippage_list)
+
         slippage_daily.slippage_percent = closest_number
         slippage_daily.save()
         latest_value = closest_number
 
         if slippage < -80:
-            break
+            limit_counter += 1
+            if limit_counter > 5:
+                break
 
-        time.sleep(0.15)
+        # time.sleep(0.15)
 
     slippage_pair.last_run = datetime.utcnow()
     slippage_pair.save()
@@ -186,6 +187,24 @@ def closer_to(number, first_choice, second_choice):
         return second_choice
     else:
         return first_choice
+
+
+def closest_to_list(number, number_list):
+    # Initialize variables to store the closest number and its difference
+    closest_num = None
+    min_diff = float("inf")
+
+    # Iterate through each number in the list
+    for num in number_list:
+        # Calculate the absolute difference
+        diff = abs(number - num)
+
+        # Check if this difference is smaller than the current smallest difference
+        if diff < min_diff:
+            min_diff = diff
+            closest_num = num
+
+    return closest_num
 
 
 def save_zerox_slippages(slippage_pair):
@@ -264,6 +283,7 @@ def get_slippage_from_asset(asset, source=None, for_date=None, extra_key=None):
                 "pair__from_asset__symbol",
                 "pair__to_asset__symbol",
                 "slippage_percent",
+                "slippage_percent_avg",
             )
             .order_by("usd_amount")
         )
@@ -276,13 +296,14 @@ def get_slippage_from_asset(asset, source=None, for_date=None, extra_key=None):
                 "pair__from_asset__symbol",
                 "pair__to_asset__symbol",
                 "slippage_percent",
+                "slippage_percent_avg",
             )
             .order_by("usd_amount")
         )
     table_data = defaultdict(dict)
     for slippage in slippages:
         if not slippage["slippage_percent"]:
-            continue
+            slippage["slippage_percent"] = slippage["slippage_percent_avg"]
         fa = slippage["pair__from_asset__symbol"]
         ta = slippage["pair__to_asset__symbol"]
         pair = f"{fa}-{ta}"
