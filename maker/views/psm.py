@@ -217,7 +217,7 @@ class PSMsView(APIView):
             entry["share_captured"] = share_captured
 
             stats["debt"] += entry["dai_debt"]
-            stats["dc"] += entry.get("dc_iam_line", 0)
+            stats["dc"] += entry.get("dc_iam_line", 0) or 0
             stats["share"] += entry["share"]
 
             if ilk_stats:
@@ -225,7 +225,8 @@ class PSMsView(APIView):
                 entry["debt_diff"] = debt_diff
                 stats_change["debt"] += debt_diff
                 if ilk_stats.dc_iam_line is not None:
-                    dc_diff = entry.get("dc_iam_line", 0) - ilk_stats.dc_iam_line
+                    dc_iam_line = entry.get("dc_iam_line", 0) or 0
+                    dc_diff = dc_iam_line - ilk_stats.dc_iam_line
                     entry["dc_diff"] = dc_diff
                     stats_change["dc"] += dc_diff
 
