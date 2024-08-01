@@ -130,9 +130,9 @@ SCHEDULE = {
     # "sync_slippage_daily_from_datalake": {
     #     "schedule": crontab(minute="0", hour="*/1"),
     # },
-    "sync_dai_trades_from_stablecoin_science_task": {
-        "schedule": crontab(minute="55", hour="*/1"),
-    },
+    # "sync_dai_trades_from_stablecoin_science_task": {
+    #     "schedule": crontab(minute="55", hour="*/1"),
+    # },
     "sync_ohlcv_asset_pairs_task": {
         "schedule": crontab(minute="1", hour="0"),
     },
