@@ -39,7 +39,7 @@ def save_ilks():
     for collateral in collaterals:
         ilk = collateral["ilk"]
 
-        if collateral["psm_adr"]:
+        if collateral["psm_adr"] or "PSM" in ilk:
             collateral_type = "psm"
         elif collateral["is_uni_v2"] or "CRVV1" in ilk or "GUNI" in ilk:
             collateral_type = "lp"
