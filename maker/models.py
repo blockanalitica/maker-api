@@ -1093,12 +1093,12 @@ class UrnEventState(models.Model):
     urn = models.CharField(max_length=42)
     operation = models.CharField(max_length=64)
     event = models.CharField(max_length=64)
-    ink = models.DecimalField(max_digits=48, decimal_places=0, default=0)
-    art = models.DecimalField(max_digits=48, decimal_places=0)
-    dart = models.DecimalField(max_digits=48, decimal_places=0)
-    dink = models.DecimalField(max_digits=48, decimal_places=0)
-    rate = models.DecimalField(max_digits=48, decimal_places=0, default=0)
-    debt = models.DecimalField(max_digits=32, decimal_places=18)
+    ink = models.DecimalField(max_digits=128, decimal_places=0, default=0)
+    art = models.DecimalField(max_digits=128, decimal_places=0)
+    dart = models.DecimalField(max_digits=128, decimal_places=0)
+    dink = models.DecimalField(max_digits=128, decimal_places=0)
+    rate = models.DecimalField(max_digits=128, decimal_places=0, default=0)
+    debt = models.DecimalField(max_digits=64, decimal_places=18)
     collateral_price = models.DecimalField(max_digits=32, decimal_places=18, null=True)
 
     class Meta:
