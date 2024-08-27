@@ -163,9 +163,9 @@ SCHEDULE = {
     "calculate_liquidity_score_for_all_assets_task": {
         "schedule": crontab(minute="30", hour="23"),
     },
-    "sync_dai_supply_growth_periodical_task": {
-        "schedule": crontab(minute="55", hour="23"),
-    },
+    # "sync_dai_supply_growth_periodical_task": {
+    #     "schedule": crontab(minute="55", hour="23"),
+    # },
     "sync_monthly_dai_supply_task": {
         # First day of the month
         "schedule": crontab(minute="0", hour="0", day_of_month="1"),
