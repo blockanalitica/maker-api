@@ -7,7 +7,6 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from celery.schedules import crontab
-from django.core.cache import cache
 from django_bulk_load import bulk_update_models
 
 from maker.modules.balances import sync_save_protocols, sync_wallet_balances
@@ -38,10 +37,7 @@ from .modules.dai_growth import (
 )
 from .modules.dai_trades import DAITradesFetcher
 from .modules.defi import fetch_defi_balance, save_rates_for_protocols
-from .modules.discord import (
-    send_risk_premium_and_protection_score_alerts,
-    send_vaults_at_risk_alert,
-)
+from .modules.discord import send_risk_premium_and_protection_score_alerts
 from .modules.events import save_urn_event_states
 from .modules.ilk import save_stats_for_vault
 from .modules.ilks import create_or_update_vaults, save_ilks
@@ -108,9 +104,6 @@ SCHEDULE = {
     },
     "get_slippage_for_slippage_pairs": {
         "schedule": crontab(minute="15", hour="*/2"),
-    },
-    "send_vaults_at_risk_alert_task": {
-        "schedule": crontab(minute="5-21/1"),
     },
     "save_vaults_liquidation_snapshot_task": {
         "schedule": crontab(minute="0", hour="*/1"),
@@ -383,28 +376,6 @@ def get_gas_task():
 @app.task
 def calculate_liquidity_score_for_all_assets_task():
     calculate_liquidity_score_for_all_assets()
-
-
-@app.task
-def send_vaults_at_risk_alert_task():
-    cache_key = "send_vaults_at_risk_alert_task:executed"
-    if cache.get(cache_key):
-        log.info(
-            "send_vaults_at_risk_alert_task was already executed in the last 30 min"
-        )
-        return
-
-    osm = OSM.objects.latest()
-    if not osm:
-        log.warning("Couldn't fetch latest OSM price")
-        return
-
-    # Only run this 5 minutes after the OSM update
-    # This is so we let all the OSMs finish updating before we send alerts
-    if datetime.now() - osm.datetime > timedelta(minutes=5):
-        send_vaults_at_risk_alert()
-        # Cache for 30 min
-        cache.set(cache_key, datetime.now(), 60 * 30)
 
 
 @app.task
