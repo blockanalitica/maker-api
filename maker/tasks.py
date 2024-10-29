@@ -360,7 +360,6 @@ def save_ilk_stats_task():
 def compute_risk_premiums_task():
     save_protection_score()
     compute_all_vault_types()
-    send_risk_premium_and_protection_score_alerts()
 
 
 @app.task
