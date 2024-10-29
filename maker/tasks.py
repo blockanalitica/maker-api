@@ -37,7 +37,6 @@ from .modules.dai_growth import (
 )
 from .modules.dai_trades import DAITradesFetcher
 from .modules.defi import fetch_defi_balance, save_rates_for_protocols
-from .modules.discord import send_risk_premium_and_protection_score_alerts
 from .modules.events import save_urn_event_states
 from .modules.ilk import save_stats_for_vault
 from .modules.ilks import create_or_update_vaults, save_ilks
@@ -360,7 +359,6 @@ def save_ilk_stats_task():
 def compute_risk_premiums_task():
     save_protection_score()
     compute_all_vault_types()
-    send_risk_premium_and_protection_score_alerts()
 
 
 @app.task
