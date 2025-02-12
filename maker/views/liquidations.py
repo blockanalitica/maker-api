@@ -287,7 +287,7 @@ class AuctionsThroughputView(APIView):
         data = []
         percent_liquidated = float(request.GET.get("percent_liquidated", 20)) / 100
         ilks = Ilk.objects.active().exclude(
-            collateral__in=["PSM", "DIRECT", "ALLOCATOR"]
+            collateral__in=["PSM", "DIRECT", "ALLOCATOR", "LSE"]
         )
         for ilk in ilks.exclude(collateral__contains="RWA"):
             auction_data = get_auction_throughput_data_for_ilk(ilk)
