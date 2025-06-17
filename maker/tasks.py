@@ -71,54 +71,54 @@ log = logging.getLogger(__name__)
 
 
 SCHEDULE = {
-    "get_gas_task": {
-        "schedule": crontab(minute="*/1"),
-    },
-    "sync_chainlink_rounds_task": {
-        "schedule": crontab(minute="*/1"),
-    },
-    "save_latest_blocks_task": {
-        "schedule": crontab(minute="*/1"),
-    },
-    "check_to_sync_vaults": {
-        "schedule": crontab(minute="*/10"),
-    },
-    "update_vaults_market_price": {
-        "schedule": crontab(minute="*/2"),
-    },
-    "sync_osm_task": {
-        "schedule": crontab(minute="0-15/1"),
-    },
-    "sync_medianizer_prices_task": {
-        "schedule": crontab(minute="*/10"),
-    },
-    "sync_ilks_task": {
-        "schedule": crontab(minute="*/10"),
-    },
-    "save_maker_liquidations_task": {
-        "schedule": crontab(minute="*/5"),
-    },
-    "save_asset_market_caps_task": {
-        "schedule": crontab(minute="*/30"),
-    },
-    "get_slippage_for_slippage_pairs": {
-        "schedule": crontab(minute="15", hour="*/2"),
-    },
-    "save_vaults_liquidation_snapshot_task": {
-        "schedule": crontab(minute="0", hour="*/1"),
-    },
-    "fetch_defi_balance_task": {
-        "schedule": crontab(minute="0", hour="*/1"),
-    },
-    "sync_d3m_task": {
-        "schedule": crontab(minute="0", hour="*/1"),
-    },
-    "save_rates_for_protocols_task": {
-        "schedule": crontab(minute="0", hour="*/1"),
-    },
-    "save_ilk_stats_task": {
-        "schedule": crontab(minute="0", hour="*/1"),
-    },
+    # "get_gas_task": {
+    #     "schedule": crontab(minute="*/1"),
+    # },
+    # "sync_chainlink_rounds_task": {
+    #     "schedule": crontab(minute="*/1"),
+    # },
+    # "save_latest_blocks_task": {
+    #     "schedule": crontab(minute="*/1"),
+    # },
+    # "check_to_sync_vaults": {
+    #     "schedule": crontab(minute="*/10"),
+    # },
+    # "update_vaults_market_price": {
+    #     "schedule": crontab(minute="*/2"),
+    # },
+    # "sync_osm_task": {
+    #     "schedule": crontab(minute="0-15/1"),
+    # },
+    # "sync_medianizer_prices_task": {
+    #     "schedule": crontab(minute="*/10"),
+    # },
+    # "sync_ilks_task": {
+    #     "schedule": crontab(minute="*/10"),
+    # },
+    # "save_maker_liquidations_task": {
+    #     "schedule": crontab(minute="*/5"),
+    # },
+    # "save_asset_market_caps_task": {
+    #     "schedule": crontab(minute="*/30"),
+    # },
+    # "get_slippage_for_slippage_pairs": {
+    #     "schedule": crontab(minute="15", hour="*/2"),
+    # },
+    # "save_vaults_liquidation_snapshot_task": {
+    #     "schedule": crontab(minute="0", hour="*/1"),
+    # },
+    # "fetch_defi_balance_task": {
+    #     "schedule": crontab(minute="0", hour="*/1"),
+    # },
+    # "sync_d3m_task": {
+    #     "schedule": crontab(minute="0", hour="*/1"),
+    # },
+    # "save_rates_for_protocols_task": {
+    #     "schedule": crontab(minute="0", hour="*/1"),
+    # },
+    # "save_ilk_stats_task": {
+    #     "schedule": crontab(minute="0", hour="*/1"),
+    # },
     # "sync_slippage_daily_from_datalake": {
     #     "schedule": crontab(minute="0", hour="*/1"),
     # },
@@ -134,43 +134,43 @@ SCHEDULE = {
     "sync_ohlcv_task": {
         "schedule": crontab(minute="15", hour="0"),
     },
-    "save_osm_daily_task": {
-        "schedule": crontab(minute="15", hour="0"),
-    },
-    # "sync_pools_task": {
-    #     "schedule": crontab(minute="30", hour="0"),
+    # "save_osm_daily_task": {
+    #     "schedule": crontab(minute="15", hour="0"),
     # },
-    "save_backed_assets_task": {
-        "schedule": crontab(minute="50", hour="0"),
-    },
-    "sync_ilk_params_task": {
-        "schedule": crontab(minute="0", hour="1"),
-    },
-    "sync_volatility_task": {
-        "schedule": crontab(minute="0", hour="2"),
-    },
-    "compute_risk_premiums_task": {
-        "schedule": crontab(minute="0", hour="5"),
-    },
-    "calculate_liquidity_score_for_all_assets_task": {
-        "schedule": crontab(minute="30", hour="23"),
-    },
-    # "sync_dai_supply_growth_periodical_task": {
-    #     "schedule": crontab(minute="55", hour="23"),
+    # # "sync_pools_task": {
+    # #     "schedule": crontab(minute="30", hour="0"),
+    # # },
+    # "save_backed_assets_task": {
+    #     "schedule": crontab(minute="50", hour="0"),
     # },
-    "sync_monthly_dai_supply_task": {
-        # First day of the month
-        "schedule": crontab(minute="0", hour="0", day_of_month="1"),
-    },
-    "set_active_slippages": {
-        "schedule": crontab(minute="5", hour="0"),
-    },
-    "sync_debank_balances_task": {
-        "schedule": crontab(minute="30", hour="2"),
-    },
-    "sync_save_protocols_task": {
-        "schedule": crontab(minute="30", hour="1"),
-    },
+    # "sync_ilk_params_task": {
+    #     "schedule": crontab(minute="0", hour="1"),
+    # },
+    # "sync_volatility_task": {
+    #     "schedule": crontab(minute="0", hour="2"),
+    # },
+    # "compute_risk_premiums_task": {
+    #     "schedule": crontab(minute="0", hour="5"),
+    # },
+    # "calculate_liquidity_score_for_all_assets_task": {
+    #     "schedule": crontab(minute="30", hour="23"),
+    # },
+    # # "sync_dai_supply_growth_periodical_task": {
+    # #     "schedule": crontab(minute="55", hour="23"),
+    # # },
+    # "sync_monthly_dai_supply_task": {
+    #     # First day of the month
+    #     "schedule": crontab(minute="0", hour="0", day_of_month="1"),
+    # },
+    # "set_active_slippages": {
+    #     "schedule": crontab(minute="5", hour="0"),
+    # },
+    # "sync_debank_balances_task": {
+    #     "schedule": crontab(minute="30", hour="2"),
+    # },
+    # "sync_save_protocols_task": {
+    #     "schedule": crontab(minute="30", hour="1"),
+    # },
 }
 
 ##############
